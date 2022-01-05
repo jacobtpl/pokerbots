@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/Users/thomasguo/pokerbots/ourbot_v1/player.py", line 227, in <module>
+    run_bot(Player(), parse_args())
+  File "/Users/thomasguo/pokerbots/ourbot_v1/skeleton/runner.py", line 135, in run_bot
+    runner.run()
+  File "/Users/thomasguo/pokerbots/ourbot_v1/skeleton/runner.py", line 110, in run
+    action = self.pokerbot.get_action(game_state, round_state, active)
+  File "/Users/thomasguo/pokerbots/ourbot_v1/player.py", line 182, in get_action
+    percentile = ranking / len(range)
+TypeError: object of type 'type' has no len()

@@ -65,9 +65,9 @@ class Player(Bot):
             draw = deck.peek(_OPP + _COMM)
 
             opp_hole = draw[:_OPP]
-            community = draw[_OPP:] + board_cards
+            community = draw[_OPP:] + board
 
-            our_hand = hole_cards + community
+            our_hand = hole + community
             opp_hand = opp_hole + community
 
             our_hand_value = eval7.evaluate(our_hand)
