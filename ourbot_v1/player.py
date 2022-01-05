@@ -15,45 +15,57 @@ class Player(Bot):
     '''
     A pokerbot.
     '''
+    
 
     def __init__(self):
         '''
         Called when a new game starts. Called exactly once.
-
+        
         Arguments:
         Nothing.
 
         Returns:
         Nothing.
         '''
+        self.played_bb = 0
+        self.played_sb = 0
+        self.opp_defend_bb = 0
+        self.opp_fold_bb = 0
+        self.opp_raise_bb = 0
+        self.opp_open_sb = 0
+        self.opp_fold_sb = 0
+        self.opp_limp_sb = 0
+
         
-    def calc_strength(self, hole, iters):
+    def calc_strength(self, hole, iters, board):
         ''' 
         Using MC with iterations to evalute hand strength 
 
         Args: 
-        hole - our hole carsd 
+        hole - our hole cards
         iters - number of times we run MC 
         '''
 
         deck = eval7.Deck() # deck of cards
-        hole_cards = [eval7.Card(card) for card in hole] # our hole cards in eval7 friendly format
 
-        for card in hole_cards: #removing our hole cards from the deck
+        for card in hole: #removing our hole cards from the deck
             deck.cards.remove(card)
         
+        for card in board:
+            deck.cards.remove(card)
+
         score = 0 
 
         for _ in range(iters): # MC the probability of winning
             deck.shuffle()
 
             _OPP = 2 
-            _COMM = 5
+            _COMM = 5 - len(board)
 
             draw = deck.peek(_OPP + _COMM)
 
             opp_hole = draw[:_OPP]
-            community = draw[_OPP:]
+            community = draw[_OPP:] + board_cards
 
             our_hand = hole_cards + community
             opp_hand = opp_hole + community
@@ -90,7 +102,18 @@ class Player(Bot):
         game_clock = game_state.game_clock  # the total number of seconds your bot has left to play this game
         round_num = game_state.round_num  # the round number from 1 to NUM_ROUNDS
         my_cards = round_state.hands[active]  # your cards
-        big_blind = bool(active)  # True if you are the big blind
+        self.big_blind = bool(active)  # True if you are the big blind
+        self.range = []
+        deck = eval7.Deck()
+        for i in range(len(deck)):
+            for j in range(i+1,len(deck)):
+                card1 = deck[i]
+                card2 = deck[j]
+                self.range.append([card1,card2])
+        if self.big_blind:
+            self.played_bb += 1
+        else:
+            self.played_sb += 1
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -138,15 +161,28 @@ class Player(Bot):
         opp_contribution = STARTING_STACK - opp_stack  # the number of chips your opponent has contributed to the pot
         net_upper_raise_bound = round_state.raise_bounds()
         stacks = [my_stack, opp_stack] #keep track of our stacks
-
         my_action = None
 
+        hole = [eval7.Card(card) for card in my_cards]
+        board = [eval7.Card(card) for card in board_cards]
         min_raise, max_raise = round_state.raise_bounds()
         pot_total = my_contribution + opp_contribution
+        _MONTE_CARLO_ITERS = 100
+        strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
 
+        range_strength = []
+        for hand in self.range:
+            range_strength.append(self.calc_strength(hand,_MONTE_CARLO_ITERS,board))
+
+        range_strength.sort()
+        ranking = 0
+        for i in range(len(range_strength)):
+            if range_strength[i] < strength:
+                ranking += 1
+        percentile = ranking / len(range)
         # raise logic 
         if street <3: #preflop 
-            raise_amount = int(my_pip + continue_cost + 0.4*(pot_total + continue_cost))
+            raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
         else: #postflop
             raise_amount = int(my_pip + continue_cost + 0.75*(pot_total + continue_cost))
 
@@ -163,23 +199,12 @@ class Player(Bot):
         else:
             temp_action = FoldAction() 
 
-        _MONTE_CARLO_ITERS = 100
-        strength = self.calc_strength(my_cards, _MONTE_CARLO_ITERS)
+        
 
         if continue_cost > 0: 
-            _SCARY = 0
-            if continue_cost > 6:
-                _SCARY = 0.1
-            if continue_cost > 15: 
-                _SCARY = .2
-            if continue_cost > 50: 
-                _SCARY = 0.35
-
-            strength = max(0, strength - _SCARY)
             pot_odds = continue_cost/(pot_total + continue_cost)
-
-            if strength >= pot_odds: # nonnegative EV decision
-                if strength > 0.5 and random.random() < strength: 
+            if ranking >= pot_odds: # nonnegative EV decision
+                if ranking > 0.7 and random.random() < strength: 
                     my_action = temp_action
                 else: 
                     my_action = CallAction()
@@ -188,7 +213,7 @@ class Player(Bot):
                 my_action = FoldAction()
                 
         else: # continue cost is 0  
-            if random.random() < strength: 
+            if ranking > 0.3 and random.random() < strength: 
                 my_action = temp_action
             else: 
                 my_action = CheckAction()
