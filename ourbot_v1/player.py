@@ -36,13 +36,12 @@ class Player(Bot):
         self.opp_fold_sb = 0
         self.opp_limp_sb = 0
 
-        
     def calc_strength(self, hole, iters, board):
         ''' 
         Using MC with iterations to evalute hand strength 
 
         Args: 
-        hole - our hole cards
+        hole - our hole carsd 
         iters - number of times we run MC 
         '''
 
@@ -161,30 +160,20 @@ class Player(Bot):
         opp_contribution = STARTING_STACK - opp_stack  # the number of chips your opponent has contributed to the pot
         net_upper_raise_bound = round_state.raise_bounds()
         stacks = [my_stack, opp_stack] #keep track of our stacks
+
         my_action = None
+
+        min_raise, max_raise = round_state.raise_bounds()
+        pot_total = my_contribution + opp_contribution
 
         hole = [eval7.Card(card) for card in my_cards]
         board = [eval7.Card(card) for card in board_cards]
-        min_raise, max_raise = round_state.raise_bounds()
-        pot_total = my_contribution + opp_contribution
-        _MONTE_CARLO_ITERS = 100
-        strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
 
-        range_strength = []
-        for hand in self.range:
-            range_strength.append(self.calc_strength(hand,_MONTE_CARLO_ITERS,board))
-
-        range_strength.sort()
-        ranking = 0
-        for i in range(len(range_strength)):
-            if range_strength[i] < strength:
-                ranking += 1
-        percentile = ranking / len(range)
         # raise logic 
         if street <3: #preflop 
             raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
         else: #postflop
-            raise_amount = int(my_pip + continue_cost + 0.75*(pot_total + continue_cost))
+            raise_amount = int(my_pip + continue_cost + 0.5*(pot_total + continue_cost))
 
         # ensure raises are legal
         raise_amount = max([min_raise, raise_amount])
@@ -199,12 +188,14 @@ class Player(Bot):
         else:
             temp_action = FoldAction() 
 
-        
+        _MONTE_CARLO_ITERS = 100
+        strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
 
         if continue_cost > 0: 
             pot_odds = continue_cost/(pot_total + continue_cost)
-            if ranking >= pot_odds: # nonnegative EV decision
-                if ranking > 0.7 and random.random() < strength: 
+
+            if strength >= pot_odds: # nonnegative EV decision
+                if strength > 0.5 and random.random() < strength: 
                     my_action = temp_action
                 else: 
                     my_action = CallAction()
@@ -213,13 +204,69 @@ class Player(Bot):
                 my_action = FoldAction()
                 
         else: # continue cost is 0  
-            if ranking > 0.3 and random.random() < strength: 
+            if random.random() < strength: 
                 my_action = temp_action
             else: 
                 my_action = CheckAction()
             
 
         return my_action
+        # min_raise, max_raise = round_state.raise_bounds()
+        # pot_total = my_contribution + opp_contribution
+        
+        # _MONTE_CARLO_ITERS = 100
+        # strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
+
+        # range_strength = []
+        # for hand in self.range:
+        #     range_strength.append(self.calc_strength(hand,_MONTE_CARLO_ITERS//10,board))
+
+        # range_strength.sort()
+        # ranking = 0
+        # for i in range(len(range_strength)):
+        #     if range_strength[i] < strength:
+        #         ranking += 1
+        # percentile = ranking / len(range)
+        # # raise logic 
+        # if street <3: #preflop 
+        #     raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
+        # else: #postflop
+        #     raise_amount = int(my_pip + continue_cost + 0.75*(pot_total + continue_cost))
+
+        # # ensure raises are legal
+        # raise_amount = max([min_raise, raise_amount])
+        # raise_amount = min([max_raise, raise_amount])
+
+        # if (RaiseAction in legal_actions and (raise_amount <= my_stack)):
+        #     temp_action = RaiseAction(raise_amount)
+        # elif (CallAction in legal_actions and (continue_cost <= my_stack)):
+        #     temp_action = CallAction()
+        # elif CheckAction in legal_actions:
+        #     temp_action = CheckAction()
+        # else:
+        #     temp_action = FoldAction() 
+
+        
+
+        # if continue_cost > 0: 
+        #     pot_odds = continue_cost/(pot_total + continue_cost)
+        #     if strength >= pot_odds: # nonnegative EV decision
+        #         if random.random() < strength: 
+        #             my_action = temp_action
+        #         else: 
+        #             my_action = CallAction()
+            
+        #     else: #negative EV
+        #         my_action = FoldAction()
+                
+        # else: # continue cost is 0  
+        #     if random.random() < strength: 
+        #         my_action = temp_action
+        #     else: 
+        #         my_action = CheckAction()
+            
+
+        # return my_action
         
 
 
