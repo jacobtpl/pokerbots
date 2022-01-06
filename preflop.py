@@ -84,8 +84,9 @@ def equity_against_random(hand):
 all_cards = Deck()
 values = {}
 
-NUMBERS = [str(x) for x in range(2,10)] + ['T', 'J', 'K', 'Q', 'A']
+NUMBERS = [str(x) for x in range(2,10)] + ['T', 'J', 'Q', 'K', 'A']
 
+output = open('preflop_equity.txt', 'a')
 # pockets
 for n in NUMBERS:
     c1 = Card(n + 's')
@@ -93,6 +94,7 @@ for n in NUMBERS:
     hand = n+n
     eq = equity_against_random([c1, c2])
     print(f'{hand}: {eq}')
+    output.write(f'{hand} {eq}\n')
     values[hand] = eq
 
 # suited
@@ -103,6 +105,7 @@ for i in range(len(NUMBERS)):
         hand = NUMBERS[i] + NUMBERS[j] + 's'
         eq = equity_against_random([c1, c2])
         print(f'{hand}: {eq}')
+        output.write(f'{hand} {eq}\n')
         values[hand] = eq
 
 # off-suited
@@ -113,6 +116,7 @@ for i in range(len(NUMBERS)):
         hand = NUMBERS[i] + NUMBERS[j] + 'o'
         eq = equity_against_random([c1, c2])
         print(f'{hand}: {eq}')
+        output.write(f'{hand} {eq}\n')
         values[hand] = eq
 
 # for i in range(len(all_cards)):
