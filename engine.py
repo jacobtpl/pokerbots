@@ -447,6 +447,7 @@ class Game():
         print('Writing', name)
         with open(name, 'w') as log_file:
             log_file.write('\n'.join(self.log))
+        print(self.log[-1])
 
 
 if __name__ == '__main__':
