@@ -59,13 +59,15 @@ class Player(Bot):
         # self.opp_open_sb = 0
         # self.opp_fold_sb = 0
         # self.opp_limp_sb = 0
-        self.open_cutoff = 0.42
-        self.open_defend = 0.50
-        self.open_reraise = 0.60
-        self.preflop_allin = 0.62
-        self.bb_defend = 0.50
-        self.bb_reraise = 0.559
-        self.bb_redefend = 0.58
+        self.open_cutoff = 0.42 # top 80%
+        self.open_defend = 0.52 # top 40%
+        self.open_reraise = 0.60 # top 10%
+        
+        self.bb_defend = 0.50 # top 50%
+        self.bb_reraise = 0.56 # top 24%
+        self.bb_redefend = 0.59 # top 13%
+
+        self.preflop_allin = 0.62 # top 6%
         load_preflop_equity()
 
     def calc_strength(self, hole, iters, board, weighted = False):
