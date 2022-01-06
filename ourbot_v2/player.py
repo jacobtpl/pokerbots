@@ -35,6 +35,8 @@ class Player(Bot):
         self.opp_open_sb = 0
         self.opp_fold_sb = 0
         self.opp_limp_sb = 0
+        self.open_freq = 0.85
+        self.defend_ratio = 1.25
 
     def calc_strength(self, hole, iters, board):
         ''' 
@@ -224,7 +226,7 @@ class Player(Bot):
                 my_action = FoldAction()
                 
         else: # continue cost is 0  
-            if percentile > 0.25 and random.random() < percentile: 
+            if percentile > 0.5 and random.random() < percentile: 
                 my_action = temp_action
             else: 
                 my_action = CheckAction()
