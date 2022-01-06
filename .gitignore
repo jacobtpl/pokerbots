@@ -1,3 +1,7 @@
 *.pyc
 */.DS_Store
 .DS_Store
+config.py
+gamelog.txt
+A.txt
+B.txt
