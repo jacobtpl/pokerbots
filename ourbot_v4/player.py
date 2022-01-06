@@ -68,6 +68,8 @@ class Player(Bot):
         self.bb_redefend = 0.59 # top 13%
 
         self.preflop_allin = 0.62 # top 6%
+
+        self.guaranteed_win = False
         load_preflop_equity()
 
     def calc_strength(self, hole, iters, board):
@@ -94,7 +96,7 @@ class Player(Bot):
         total_weight = 0
 
         for _ in range(iters): # MC the probability of winning
-            
+
             deck.shuffle()
 
             _OPP = 2 
@@ -146,6 +148,19 @@ class Player(Bot):
         my_cards = round_state.hands[active]  # your cards
         self.big_blind = bool(active)  # True if you are the big blind
         self.num_raises = 0
+
+        remain = 1000 - round_num + 1
+        if remain % 2 == 0:
+            mincost = 3 * (remain // 2)
+        else:
+            mincost = 3 * (remain // 2)
+            if self.big_blind:
+                mincost += 2
+            else:
+                mincost += 1
+        
+        if mincost < my_bankroll:
+            self.guaranteed_win = True
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -204,83 +219,103 @@ class Player(Bot):
 
         _MONTE_CARLO_ITERS = 200
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board)
+
         # raise logic 
-        if street < 3: #preflop 
+        if street < 3: #preflop 3x
             raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
-        else: #postflop
+        else: #postflop half pot
             raise_amount = int(my_pip + continue_cost + 0.5*(pot_total + continue_cost))
 
         # ensure raises are legal
         raise_amount = max([min_raise, raise_amount])
         raise_amount = min([max_raise, raise_amount])
 
+        if RaiseAction in legal_actions:
+            jam_action = RaiseAction(max_raise)
+        elif CallAction in legal_actions:
+            jam_action = CallAction()
+        else:
+            jam_action = CheckAction()
+
+        if RaiseAction in legal_actions:
+            aggro_action = RaiseAction(raise_amount)
+        elif CallAction in legal_actions:
+            aggro_action = CallAction()
+        else:
+            aggro_action = CheckAction()
+
+        if CallAction in legal_actions:
+            flat_action = CallAction()
+        else:
+            flat_action = CheckAction()
+
+        if CheckAction in legal_actions:
+            passive_action = CheckAction()
+        else:
+            passive_action = FoldAction()
+
+        if self.guaranteed_win:
+            my_action = passive_action
+            return my_action
+
         # PREFLOP casework
         # if SB, open if strength > 0.42
         if street < 3 and not self.big_blind and continue_cost == 1:
             if strength > self.open_cutoff:
-                my_action = RaiseAction(raise_amount)
+                my_action = aggro_action
                 return my_action
             else:
-                my_action = FoldAction()
+                my_action = passive_action
                 return my_action
         # if SB, defend against 3-bet if strength > 0.50 and reraise if strength > 0.60
         if street < 3 and not self.big_blind and continue_cost > 1 and my_pip < 10:
             if strength > self.open_reraise:
-                my_action = RaiseAction(raise_amount)
+                my_action = aggro_action
                 return my_action
             elif strength > self.open_defend:
-                my_action = CallAction()
+                my_action = flat_action
                 return my_action
             else:
-                my_action = FoldAction()
+                my_action = passive_action
                 return my_action
         # if SB, defend against 5-bet if strength > 0.62
         if street < 3 and not self.big_blind and my_pip >= 10:
             if strength > self.preflop_allin:
-                my_action = RaiseAction(raise_amount)
+                my_action = jam_action
                 return my_action
             else:
-                my_action = FoldAction()
+                my_action = passive_action
                 return my_action
         # if BB, do not allow limpers if strength > 0.42
         if street < 3 and self.big_blind and continue_cost == 0:
             if strength > self.open_cutoff:
-                my_action = RaiseAction(raise_amount)
+                my_action = aggro_action
                 return my_action
             else:
-                my_action = CheckAction()
+                my_action = flat_action
                 return my_action
         # if BB, defend against an open if strength > 0.5 and reraise if strength > 0.559
         if street < 3 and self.big_blind and continue_cost < 10:
             if strength > self.bb_reraise:
-                my_action = RaiseAction(raise_amount)
+                my_action = aggro_action
                 return my_action
             elif strength > self.bb_defend:
-                my_action = CallAction()
+                my_action = flat_action
                 return my_action
             else:
-                my_action = FoldAction()
+                my_action = passive_action
                 return my_action
         # if BB, all-in against a 4bet if strength > 0.62 and defend if strength > 0.58
         if street < 3 and self.big_blind and continue_cost >= 10:
             if strength > self.preflop_allin:
-                my_action = RaiseAction(max_raise)
+                my_action = jam_action
                 return my_action
             elif strength > self.bb_redefend:
-                my_action = CallAction()
+                my_action = flat_action
                 return my_action
             else:
-                my_action = FoldAction()
+                my_action = passive_action
                 return my_action
-        
-        if (RaiseAction in legal_actions and (raise_amount <= my_stack)):
-            temp_action = RaiseAction(raise_amount)
-        elif (CallAction in legal_actions and (continue_cost <= my_stack)):
-            temp_action = CallAction()
-        elif CheckAction in legal_actions:
-            temp_action = CheckAction()
-        else:
-            temp_action = FoldAction() 
 
         if continue_cost > 0:
             self.num_raises += 1
@@ -294,80 +329,22 @@ class Player(Bot):
 
             if strength >= pot_odds: # nonnegative EV decision
                 if strength > 0.75 and random.random() < strength: 
-                    my_action = temp_action
+                    my_action = aggro_action
                 else: 
-                    my_action = CallAction()
+                    my_action = flat_action
             
             else: #negative EV
-                my_action = FoldAction()
-                
+                my_action = passive_action
         else: # continue cost is 0  
             if strength > 0.25 and random.random() < strength: 
-                my_action = temp_action
+                my_action = aggro_action
             else: 
-                my_action = CheckAction()
+                my_action = flat_action
         
         #if isinstance(my_action, RaiseAction):
             #self.num_raises += 1
 
         return my_action
-        # min_raise, max_raise = round_state.raise_bounds()
-        # pot_total = my_contribution + opp_contribution
-        
-        # _MONTE_CARLO_ITERS = 100
-        # strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
-
-        # range_strength = []
-        # for hand in self.range:
-        #     range_strength.append(self.calc_strength(hand,_MONTE_CARLO_ITERS//10,board))
-
-        # range_strength.sort()
-        # ranking = 0
-        # for i in range(len(range_strength)):
-        #     if range_strength[i] < strength:
-        #         ranking += 1
-        # percentile = ranking / len(range)
-        # # raise logic 
-        # if street <3: #preflop 
-        #     raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
-        # else: #postflop
-        #     raise_amount = int(my_pip + continue_cost + 0.75*(pot_total + continue_cost))
-
-        # # ensure raises are legal
-        # raise_amount = max([min_raise, raise_amount])
-        # raise_amount = min([max_raise, raise_amount])
-
-        # if (RaiseAction in legal_actions and (raise_amount <= my_stack)):
-        #     temp_action = RaiseAction(raise_amount)
-        # elif (CallAction in legal_actions and (continue_cost <= my_stack)):
-        #     temp_action = CallAction()
-        # elif CheckAction in legal_actions:
-        #     temp_action = CheckAction()
-        # else:
-        #     temp_action = FoldAction() 
-
-        
-
-        # if continue_cost > 0: 
-        #     pot_odds = continue_cost/(pot_total + continue_cost)
-        #     if strength >= pot_odds: # nonnegative EV decision
-        #         if random.random() < strength: 
-        #             my_action = temp_action
-        #         else: 
-        #             my_action = CallAction()
-            
-        #     else: #negative EV
-        #         my_action = FoldAction()
-                
-        # else: # continue cost is 0  
-        #     if random.random() < strength: 
-        #         my_action = temp_action
-        #     else: 
-        #         my_action = CheckAction()
-            
-
-        # return my_action
-        
 
 
 if __name__ == '__main__':
