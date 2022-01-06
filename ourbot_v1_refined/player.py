@@ -27,14 +27,14 @@ class Player(Bot):
         Returns:
         Nothing.
         '''
-        self.played_bb = 0
-        self.played_sb = 0
-        self.opp_defend_bb = 0
-        self.opp_fold_bb = 0
-        self.opp_raise_bb = 0
-        self.opp_open_sb = 0
-        self.opp_fold_sb = 0
-        self.opp_limp_sb = 0
+        # self.played_bb = 0
+        # self.played_sb = 0
+        # self.opp_defend_bb = 0
+        # self.opp_fold_bb = 0
+        # self.opp_raise_bb = 0
+        # self.opp_open_sb = 0
+        # self.opp_fold_sb = 0
+        # self.opp_limp_sb = 0
 
     def calc_strength(self, hole, iters, board):
         ''' 
@@ -163,7 +163,7 @@ class Player(Bot):
         if street <3: #preflop 
             raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
         else: #postflop
-            raise_amount = int(my_pip + continue_cost + 0.5*(pot_total + continue_cost))
+            raise_amount = int(my_pip + continue_cost + 0.75*(pot_total + continue_cost))
 
         # ensure raises are legal
         raise_amount = max([min_raise, raise_amount])
@@ -180,15 +180,19 @@ class Player(Bot):
 
         _MONTE_CARLO_ITERS = 100
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
-
         if continue_cost > 0:
             self.num_raises += 1
-            _SCARY = self.num_raises * 0.1
-            strength = max(0, strength - _SCARY)
+            scary = self.num_raises * 0.15
+
+            if strength < scary:
+                strength = 0
+            else:
+                strength = (strength-scary)/(1-scary)
+
             pot_odds = continue_cost/(pot_total + continue_cost)
 
             if strength >= pot_odds: # nonnegative EV decision
-                if strength > 0.5 and random.random() < strength: 
+                if strength > 0.75 and random.random() < strength: 
                     my_action = temp_action
                 else: 
                     my_action = CallAction()
@@ -197,13 +201,13 @@ class Player(Bot):
                 my_action = FoldAction()
                 
         else: # continue cost is 0  
-            if random.random() < strength: 
+            if strength > 0.25 and random.random() < strength: 
                 my_action = temp_action
             else: 
                 my_action = CheckAction()
         
-        if isinstance(my_action, RaiseAction):
-            self.num_raises += 1
+        #if isinstance(my_action, RaiseAction):
+            #self.num_raises += 1
 
         return my_action
         # min_raise, max_raise = round_state.raise_bounds()
