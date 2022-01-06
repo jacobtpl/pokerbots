@@ -70,7 +70,7 @@ class Player(Bot):
         self.preflop_allin = 0.62 # top 6%
         load_preflop_equity()
 
-    def calc_strength(self, hole, iters, board, weighted = False):
+    def calc_strength(self, hole, iters, board):
         ''' 
         Using MC with iterations to evalute hand strength 
 
@@ -78,7 +78,9 @@ class Player(Bot):
         hole - our hole carsd 
         iters - number of times we run MC 
         '''
-
+        if len(board) == 0:
+            return get_preflop_equity(hole)
+    
         deck = eval7.Deck() # deck of cards
 
         for card in hole: #removing our hole cards from the deck
@@ -92,6 +94,7 @@ class Player(Bot):
         total_weight = 0
 
         for _ in range(iters): # MC the probability of winning
+            
             deck.shuffle()
 
             _OPP = 2 
@@ -108,7 +111,7 @@ class Player(Bot):
             our_hand_value = eval7.evaluate(our_hand)
             opp_hand_value = eval7.evaluate(opp_hand)
 
-            weight = get_preflop_equity(opp_hole) if weighted else 1
+            weight = get_preflop_equity(opp_hole)
 
             if our_hand_value > opp_hand_value:
                 score += weight
@@ -199,14 +202,8 @@ class Player(Bot):
         hole = [eval7.Card(card) for card in my_cards]
         board = [eval7.Card(card) for card in board_cards]
 
-        _MONTE_CARLO_ITERS = 100
-
-        if street < 3:
-            strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board, weighted = False)
-        else:
-            strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board, weighted = True)
-
-
+        _MONTE_CARLO_ITERS = 200
+        strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board)
         # raise logic 
         if street < 3: #preflop 
             raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
