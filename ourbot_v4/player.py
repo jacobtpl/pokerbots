@@ -64,7 +64,7 @@ class Player(Bot):
         self.open_reraise = 0.60 # top 10%
         
         self.bb_defend = 0.50 # top 50%
-        self.bb_reraise = 0.56 # top 24%
+        self.bb_reraise = 0.559 # top 24%
         self.bb_redefend = 0.59 # top 13%
 
         self.preflop_allin = 0.62 # top 6%
@@ -278,7 +278,8 @@ class Player(Bot):
             else:
                 my_action = passive_action
                 return my_action
-        # if SB, defend against 5-bet if strength > 0.62
+        # if SB, jam against 5-bet if strength > 0.62
+        # note that we never defend, currently because our post-flop play is weak
         if street < 3 and not self.big_blind and my_pip >= 10:
             if strength > self.preflop_allin:
                 my_action = jam_action
