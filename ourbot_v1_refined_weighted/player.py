@@ -12,7 +12,7 @@ import eval7
 
 EQUITY = {}
 def load_preflop_equity():
-    stored = open('../preflop_equity.txt', 'r').read().strip().split()
+    stored = open('preflop_equity.txt', 'r').read().strip().split()
     for i in range(0, len(stored), 2):
         EQUITY[stored[i]] = float(stored[i+1])
         if len(stored[i]) == 3:
