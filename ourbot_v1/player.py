@@ -191,7 +191,16 @@ class Player(Bot):
         _MONTE_CARLO_ITERS = 100
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
 
-        if continue_cost > 0: 
+        if continue_cost > 0:
+            _SCARY = 0
+            if continue_cost > 6:
+                _SCARY = 0.1
+            if continue_cost > 15: 
+                _SCARY = .2
+            if continue_cost > 50: 
+                _SCARY = 0.35
+
+            strength = max(0, strength - _SCARY)
             pot_odds = continue_cost/(pot_total + continue_cost)
 
             if strength >= pot_odds: # nonnegative EV decision
