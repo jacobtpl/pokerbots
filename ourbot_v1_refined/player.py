@@ -35,6 +35,13 @@ class Player(Bot):
         # self.opp_open_sb = 0
         # self.opp_fold_sb = 0
         # self.opp_limp_sb = 0
+        self.open_cutoff = 0.42
+        self.open_defend = 0.50
+        self.open_reraise = 0.60
+        self.preflop_allin = 0.62
+        self.bb_defend = 0.50
+        self.bb_reraise = 0.559
+        self.bb_redefend = 0.58
 
     def calc_strength(self, hole, iters, board):
         ''' 
@@ -159,16 +166,78 @@ class Player(Bot):
         hole = [eval7.Card(card) for card in my_cards]
         board = [eval7.Card(card) for card in board_cards]
 
+        _MONTE_CARLO_ITERS = 100
+        strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
+
         # raise logic 
-        if street <3: #preflop 
+        if street < 3: #preflop 
             raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
         else: #postflop
-            raise_amount = int(my_pip + continue_cost + 0.75*(pot_total + continue_cost))
+            raise_amount = int(my_pip + continue_cost + 0.5*(pot_total + continue_cost))
 
         # ensure raises are legal
         raise_amount = max([min_raise, raise_amount])
         raise_amount = min([max_raise, raise_amount])
 
+        # PREFLOP casework
+        # if SB, open if strength > 0.42
+        if street < 3 and not self.big_blind and continue_cost == 1:
+            if strength > self.open_cutoff:
+                my_action = RaiseAction(raise_amount)
+                return my_action
+            else:
+                my_action = FoldAction()
+                return my_action
+        # if SB, defend against 3-bet if strength > 0.50 and reraise if strength > 0.60
+        if street < 3 and not self.big_blind and continue_cost > 1 and my_pip < 10:
+            if strength > self.open_reraise:
+                my_action = RaiseAction(raise_amount)
+                return my_action
+            elif strength > self.open_defend:
+                my_action = CallAction()
+                return my_action
+            else:
+                my_action = FoldAction()
+                return my_action
+        # if SB, defend against 5-bet if strength > 0.62
+        if street < 3 and not self.big_blind and my_pip >= 10:
+            if strength > self.preflop_allin:
+                my_action = RaiseAction(raise_amount)
+                return my_action
+            else:
+                my_action = FoldAction()
+                return my_action
+        # if BB, do not allow limpers if strength > 0.42
+        if street < 3 and self.big_blind and continue_cost == 0:
+            if strength > self.open_cutoff:
+                my_action = RaiseAction(raise_amount)
+                return my_action
+            else:
+                my_action = CheckAction()
+                return my_action
+        # if BB, defend against an open if strength > 0.5 and reraise if strength > 0.559
+        if street < 3 and self.big_blind and continue_cost < 10:
+            if strength > self.bb_reraise:
+                my_action = RaiseAction(raise_amount)
+                return my_action
+            elif strength > self.bb_defend:
+                my_action = CallAction()
+                return my_action
+            else:
+                my_action = FoldAction()
+                return my_action
+        # if BB, all-in against a 4bet if strength > 0.62 and defend if strength > 0.58
+        if street < 3 and self.big_blind and continue_cost >= 10:
+            if strength > self.preflop_allin:
+                my_action = RaiseAction(max_raise)
+                return my_action
+            elif strength > self.bb_redefend:
+                my_action = CallAction()
+                return my_action
+            else:
+                my_action = FoldAction()
+                return my_action
+        
         if (RaiseAction in legal_actions and (raise_amount <= my_stack)):
             temp_action = RaiseAction(raise_amount)
         elif (CallAction in legal_actions and (continue_cost <= my_stack)):
@@ -178,16 +247,13 @@ class Player(Bot):
         else:
             temp_action = FoldAction() 
 
-        _MONTE_CARLO_ITERS = 100
-        strength = self.calc_strength(hole, _MONTE_CARLO_ITERS,board)
         if continue_cost > 0:
             self.num_raises += 1
-            scary = self.num_raises * 0.15
+            out_of_range = 0.15
+            for _ in range(self.num_raises):
+                strength = (strength - out_of_range)/(1 - out_of_range)
 
-            if strength < scary:
-                strength = 0
-            else:
-                strength = (strength-scary)/(1-scary)
+            strength = max(0,strength)
 
             pot_odds = continue_cost/(pot_total + continue_cost)
 
