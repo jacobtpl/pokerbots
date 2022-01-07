@@ -318,29 +318,44 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
 
+        out_of_range = 0.2
+        scared_strength = strength
+        for _ in range(self.num_raises):
+            scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
+
+        scared_strength = max(0,scared_strength)
+
         if continue_cost > 0:
             self.num_raises += 1
-            out_of_range = 0.15
-            for _ in range(self.num_raises):
-                strength = (strength - out_of_range)/(1 - out_of_range)
 
-            strength = max(0,strength)
+            scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
+            scared_strength = max(0,scared_strength)
 
             pot_odds = continue_cost/(pot_total + continue_cost)
 
-            if strength >= pot_odds: # nonnegative EV decision
-                if strength > 0.75 and random.random() < strength: 
+            if scared_strength >= pot_odds: # nonnegative EV decision
+                if scared_strength > 0.75 and random.random() < strength: 
                     my_action = aggro_action
+                    self.num_raises += 1
                 else: 
                     my_action = flat_action
             
             else: #negative EV
                 my_action = passive_action
-        else: # continue cost is 0  
-            if strength > 0.25 and random.random() < strength: 
-                my_action = aggro_action
-            else: 
-                my_action = flat_action
+        else: # continue cost is 0
+            if self.big_blind:
+                if scared_strength > 0.6 and random.random() < strength: 
+                    my_action = aggro_action
+                    self.num_raises += 1
+                else: 
+                    my_action = flat_action
+            else:
+                if random.random() < strength: 
+                    my_action = aggro_action
+                    self.num_raises += 1
+                else: 
+                    my_action = flat_action
+            
         
         #if isinstance(my_action, RaiseAction):
             #self.num_raises += 1
