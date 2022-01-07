@@ -159,8 +159,8 @@ class Player(Bot):
             else:
                 mincost += 1
         
-        # if mincost < my_bankroll:
-        #     self.guaranteed_win = True
+        if mincost < my_bankroll:
+            self.guaranteed_win = True
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -318,8 +318,31 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
 
-        out_of_range = 0.2
+        # CURRENT VALUES:
+        # flop scare factor = 0.1
+        # turn scare factor = 0.15
+        # river scare factor = 0.2
+        # reraise flop if 0.8, lead if 0.6
+        # reraise turn if 0.8, lead if 0.6
+        # reraise river if 0.85, lead if 0.7
+        if street == 3:
+            out_of_range = 0.1
+            reraise_cutoff = 0.8
+            lead_cutoff = 0.6
+            cbet_cutoff = 0.0
+        elif street == 4:
+            out_of_range = 0.15
+            reraise_cutoff = 0.8
+            lead_cutoff = 0.6
+            cbet_cutoff = 0.0
+        else:
+            out_of_range = 0.2
+            reraise_cutoff = 0.85
+            lead_cutoff = 0.7
+            cbet_cutoff = 0.0
+
         scared_strength = strength
+
         for _ in range(self.num_raises):
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
 
@@ -327,14 +350,13 @@ class Player(Bot):
 
         if continue_cost > 0:
             self.num_raises += 1
+            pot_odds = continue_cost/(pot_total + continue_cost)
 
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
             scared_strength = max(0,scared_strength)
 
-            pot_odds = continue_cost/(pot_total + continue_cost)
-
             if scared_strength >= pot_odds: # nonnegative EV decision
-                if scared_strength > 0.75 and random.random() < strength: 
+                if scared_strength > reraise_cutoff and random.random() < scared_strength: 
                     my_action = aggro_action
                     self.num_raises += 1
                 else: 
@@ -344,22 +366,17 @@ class Player(Bot):
                 my_action = passive_action
         else: # continue cost is 0
             if self.big_blind:
-                if scared_strength > 0.6 and random.random() < strength: 
+                if scared_strength > lead_cutoff and random.random() < scared_strength: 
                     my_action = aggro_action
                     self.num_raises += 1
                 else: 
                     my_action = flat_action
             else:
-                if random.random() < strength: 
+                if scared_strength > cbet_cutoff and random.random() < scared_strength: 
                     my_action = aggro_action
                     self.num_raises += 1
                 else: 
                     my_action = flat_action
-            
-        
-        #if isinstance(my_action, RaiseAction):
-            #self.num_raises += 1
-
         return my_action
 
 
