@@ -105,15 +105,16 @@ class Player(Bot):
 
         # PERCENTILES are rounded up, i.e. best hand is 100% and worst hand is > 0%
 
-        self.open_cutoff = 0.45 # top 70%
-        self.open_defend = 0.52 # top 40%
-        self.open_reraise = 0.60 # top 10%
+        # PREFLOP
+        self.open_cutoff = 70 # > 0.45
+        self.open_defend = 40 # > 0.52
+        self.open_reraise = 10 # > 0.60%
         
-        self.bb_defend = 0.50 # top 50%
-        self.bb_reraise = 0.559 # top 24%
-        self.bb_redefend = 0.59 # top 13%
+        self.bb_defend = 50 # top 50%
+        self.bb_reraise = 24 # > 0.559
+        self.bb_redefend = 13 # > 0.59
 
-        self.preflop_allin = 0.62 # top 6%
+        self.preflop_allin = 6 # > 0.62
 
         self.guaranteed_win = False
         load_preflop_equity()
@@ -214,16 +215,16 @@ class Player(Bot):
             self.guaranteed_win = True
 
         if my_bankroll < -300: # aggro play if behind
-            self.open_cutoff = 0.00 # top 100%
-            self.open_defend = 0.45 # top 70%
+            self.open_cutoff = 100 # > 0
+            self.open_defend = 70 # > 0.45
             self.aggro = 0.2
         elif my_bankroll < -100:
-            self.open_cutoff = 0.40 # top 87%
-            self.open_defend = 0.47 # top 63%
+            self.open_cutoff = 87 # > 0.40
+            self.open_defend = 63 # > 0.47
             self.aggro = 0.1
         else:
-            self.open_cutoff = 0.45 # top 70%
-            self.open_defend = 0.52 # top 40%
+            self.open_cutoff = 70 # > 0.45
+            self.open_defend = 40 # > 0.52
             if my_bankroll > 200:
                 self.aggro = -0.1
             else:
@@ -247,6 +248,13 @@ class Player(Bot):
         street = previous_state.street  # 0, 3, 4, or 5 representing when this round ended
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
+    
+    def adjust_board_texture(self, board):
+        suits = [str(card)[1] for card in board]
+        for suit in suits:
+            if suits.count(suit) >= 4:
+                return 0.1
+        return 0
         
 
     def get_action(self, game_state, round_state, active):
@@ -326,9 +334,10 @@ class Player(Bot):
             return my_action
 
         # PREFLOP casework
+        rev_percentile = 100 - get_preflop_percentile(hole)
         # if SB, open if strength > 0.42
         if street < 3 and not self.big_blind and continue_cost == 1:
-            if strength > self.open_cutoff:
+            if rev_percentile < self.open_cutoff:
                 my_action = aggro_action
                 return my_action
             else:
@@ -336,10 +345,10 @@ class Player(Bot):
                 return my_action
         # if SB, defend against 3-bet if strength > 0.50 and reraise if strength > 0.60
         if street < 3 and not self.big_blind and continue_cost > 1 and my_pip < 10:
-            if strength > self.open_reraise:
+            if rev_percentile < self.open_reraise:
                 my_action = aggro_action
                 return my_action
-            elif strength > self.open_defend:
+            elif rev_percentile < self.open_defend:
                 my_action = flat_action
                 return my_action
             else:
@@ -348,7 +357,7 @@ class Player(Bot):
         # if SB, jam against 5-bet if strength > 0.62
         # note that we never defend, currently because our post-flop play is weak
         if street < 3 and not self.big_blind and my_pip >= 10:
-            if strength > self.preflop_allin:
+            if rev_percentile < self.preflop_allin:
                 my_action = jam_action
                 return my_action
             else:
@@ -356,7 +365,7 @@ class Player(Bot):
                 return my_action
         # if BB, do not allow limpers if strength > 0.42
         if street < 3 and self.big_blind and continue_cost == 0:
-            if strength > self.open_cutoff:
+            if rev_percentile < self.open_cutoff:
                 my_action = aggro_action
                 return my_action
             else:
@@ -364,10 +373,10 @@ class Player(Bot):
                 return my_action
         # if BB, defend against an open if strength > 0.5 and reraise if strength > 0.559
         if street < 3 and self.big_blind and continue_cost < 10:
-            if strength > self.bb_reraise:
+            if rev_percentile < self.bb_reraise:
                 my_action = aggro_action
                 return my_action
-            elif strength > self.bb_defend:
+            elif rev_percentile < self.bb_defend:
                 my_action = flat_action
                 return my_action
             else:
@@ -375,7 +384,7 @@ class Player(Bot):
                 return my_action
         # if BB, all-in against a 4bet if strength > 0.62 and defend if strength > 0.58
         if street < 3 and self.big_blind and continue_cost >= 10:
-            if strength > self.preflop_allin:
+            if rev_percentile < self.preflop_allin:
                 my_action = jam_action
                 return my_action
             elif strength > self.bb_redefend:
@@ -421,6 +430,9 @@ class Player(Bot):
 
         scared_strength = max(0,scared_strength)
         scared_strength += self.aggro
+
+        scared_strength -= self.adjust_board_texture(board)
+
         if continue_cost > 0:
             self.num_raises += 1
             pot_odds = continue_cost/(pot_total + continue_cost)
