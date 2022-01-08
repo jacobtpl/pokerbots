@@ -215,21 +215,16 @@ class Player(Bot):
         if mincost < my_bankroll:
             self.guaranteed_win = True
 
-        if my_bankroll < -300: # aggro play if behind
-            self.open_cutoff = 100 # > 0
-            self.open_defend = 70 # > 0.45
-            self.aggro = 0.2
-        elif my_bankroll < -100:
-            self.open_cutoff = 87 # > 0.40
-            self.open_defend = 63 # > 0.47
-            self.aggro = 0.1
-        else:
-            self.open_cutoff = 70 # > 0.45
-            self.open_defend = 40 # > 0.52
-            if my_bankroll > 200:
-                self.aggro = -0.1
-            else:
-                self.aggro = 0.0
+        # if my_bankroll < -300: # aggro play if behind
+        #     self.aggro = 0.2
+        # elif my_bankroll < -150:
+        #     self.aggro = 0.1
+        # elif my_bankroll > 150:
+        #     self.aggro = -0.05
+        # else:
+        #     self.aggro = 0.0
+
+        self.aggro = 0 
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -250,7 +245,7 @@ class Player(Bot):
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
     
-    def get_board_texture(board):
+    def get_board_texture(self,board):
         suits = [str(card)[1] for card in board]
         ans = 0
         for suit in suits:
@@ -317,7 +312,7 @@ class Player(Bot):
         # bet to pot ratio
         ratio = 0.5
         if street == 3:
-            ratio = 0.25 + self.get_board_texture(board)/37 * 0.5
+            ratio = 0.35 + self.get_board_texture(board)/37 * 0.5
 
         # raise logic 
         if street < 3: #preflop 3x
@@ -358,7 +353,8 @@ class Player(Bot):
             return my_action
 
         # PREFLOP casework
-        rev_percentile = 100 - get_preflop_percentile(hole)
+        rev_percentile = 100 - get_preflop_percentile(hole) - 100*self.aggro
+        rev_percentile = max(rev_percentile,0)
         # if SB, open
         if street < 3 and not self.big_blind and continue_cost == 1:
             if rev_percentile < self.open_cutoff:
