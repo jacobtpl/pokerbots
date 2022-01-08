@@ -428,7 +428,9 @@ class Player(Bot):
         for _ in range(self.num_raises):
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
 
-        scared_strength = max(0,scared_strength)
+        self.min_scared_strength = 0.1
+
+        scared_strength = max(self.min_scared_strength, scared_strength)
         scared_strength += self.aggro
 
         scared_strength -= self.adjust_board_texture(board)
