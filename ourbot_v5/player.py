@@ -249,12 +249,31 @@ class Player(Bot):
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
     
-    def adjust_board_texture(self, board):
+    def get_board_texture(board):
         suits = [str(card)[1] for card in board]
+        ans = 0
         for suit in suits:
-            if suits.count(suit) >= 4:
-                return 0.1
-        return 0
+            if suits.count(suit) == 3:
+                ans += 20
+            elif suits.count(suit) == 2:
+                ans += 10
+
+        numbers = [VALUE_MAP[str(card)[0]] for card in board]
+        for i in range(1,11):
+            cnt = 0
+            for _ in range(i,i+5):
+                val = _
+                if val == 1:
+                    val = 14
+                if numbers.count(val) >= 1:
+                    cnt += 1
+            if cnt == 2:
+                ans += 1
+            if cnt == 3:
+                ans += 5
+        # maxval = 20 + 17 = 37
+        # minval = 0
+        return ans
         
 
     def get_action(self, game_state, round_state, active):
@@ -294,12 +313,16 @@ class Player(Bot):
 
         _MONTE_CARLO_ITERS = 200
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board)
+        # bet to pot ratio
+        ratio = 0.5
+        if street == 3:
+            ratio = 0.25 + self.get_board_texture(board)/37 * 0.5
 
         # raise logic 
         if street < 3: #preflop 3x
             raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
         else: #postflop half pot
-            raise_amount = int(my_pip + continue_cost + 0.5*(pot_total + continue_cost))
+            raise_amount = int(my_pip + continue_cost + ratio*(pot_total + continue_cost))
 
         # ensure raises are legal
         raise_amount = max([min_raise, raise_amount])
@@ -423,24 +446,21 @@ class Player(Bot):
             lead_bluff = 0.1
             check_bluff = 0.2
 
+
+        if continue_cost > 0:
+            self.num_raises += 1
+
         scared_strength = strength
 
         for _ in range(self.num_raises):
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
 
-        self.min_scared_strength = 0.1
-
-        scared_strength = max(self.min_scared_strength, scared_strength)
         scared_strength += self.aggro
-
-        scared_strength -= self.adjust_board_texture(board)
+        scared_strength = max(0.1,scared_strength)
 
         if continue_cost > 0:
-            self.num_raises += 1
-            pot_odds = continue_cost/(pot_total + continue_cost)
 
-            scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
-            scared_strength = max(0,scared_strength)
+            pot_odds = continue_cost/(pot_total + continue_cost)
 
             if scared_strength >= pot_odds: # nonnegative EV decision
                 if scared_strength > reraise_cutoff: 
