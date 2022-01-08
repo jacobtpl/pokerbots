@@ -413,7 +413,7 @@ class Player(Bot):
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
-            lead_cutoff = 0.6
+            lead_cutoff = 0.0
             cbet_cutoff = 0.3
             lead_bluff = 0.1
             check_bluff = 0.2
@@ -421,7 +421,7 @@ class Player(Bot):
             out_of_range = 0.2
             reraise_cutoff = 0.85
             lead_cutoff = 0.7
-            cbet_cutoff = 0.6
+            cbet_cutoff = 0.0
             lead_bluff = 0.1
             check_bluff = 0.2
 
