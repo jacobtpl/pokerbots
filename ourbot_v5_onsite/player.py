@@ -212,8 +212,8 @@ class Player(Bot):
             else:
                 mincost += 1
         
-        if mincost < my_bankroll:
-            self.guaranteed_win = True
+        # if mincost < my_bankroll:
+        #     self.guaranteed_win = True
 
 
     def handle_round_over(self, game_state, terminal_state, active):
