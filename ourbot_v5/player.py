@@ -215,17 +215,6 @@ class Player(Bot):
         if mincost < my_bankroll:
             self.guaranteed_win = True
 
-        # if my_bankroll < -300: # aggro play if behind
-        #     self.aggro = 0.2
-        # elif my_bankroll < -150:
-        #     self.aggro = 0.1
-        # elif my_bankroll > 150:
-        #     self.aggro = -0.05
-        # else:
-        #     self.aggro = 0.0
-
-        self.aggro = 0 
-
 
     def handle_round_over(self, game_state, terminal_state, active):
         '''
@@ -311,8 +300,8 @@ class Player(Bot):
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board)
         # bet to pot ratio
         ratio = 0.5
-        if street == 3:
-            ratio = 0.35 + self.get_board_texture(board)/37 * 0.5
+        # if street == 3:
+        #     ratio = 0.35 + self.get_board_texture(board)/37 * 0.5
 
         # raise logic 
         if street < 3: #preflop 3x
@@ -353,7 +342,7 @@ class Player(Bot):
             return my_action
 
         # PREFLOP casework
-        rev_percentile = 100 - get_preflop_percentile(hole) - 100*self.aggro
+        rev_percentile = 100 - get_preflop_percentile(hole)
         rev_percentile = max(rev_percentile,0)
         # if SB, open
         if street < 3 and not self.big_blind and continue_cost == 1:
@@ -445,7 +434,6 @@ class Player(Bot):
         for _ in range(self.num_raises):
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
 
-        scared_strength += self.aggro
         scared_strength = max(0.1,scared_strength)
 
         if continue_cost > 0:
