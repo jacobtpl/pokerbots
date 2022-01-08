@@ -215,16 +215,14 @@ class Player(Bot):
         if mincost < my_bankroll:
             self.guaranteed_win = True
 
-        # if my_bankroll < -300: # aggro play if behind
-        #     self.aggro = 0.2
-        # elif my_bankroll < -150:
-        #     self.aggro = 0.1
-        # elif my_bankroll > 150:
-        #     self.aggro = -0.05
-        # else:
-        #     self.aggro = 0.0
-
-        self.aggro = 0 
+        if my_bankroll < -300: # aggro play if behind
+            self.aggro = 0.2
+        elif my_bankroll < -150:
+            self.aggro = 0.1
+        elif my_bankroll > 150:
+            self.aggro = -0.05
+        else:
+            self.aggro = 0.0
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -311,8 +309,8 @@ class Player(Bot):
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board)
         # bet to pot ratio
         ratio = 0.5
-        if street == 3:
-            ratio = 0.35 + self.get_board_texture(board)/37 * 0.5
+        # if street == 3:
+        #     ratio = 0.25 + self.get_board_texture(board)/37 * 0.5
 
         # raise logic 
         if street < 3: #preflop 3x
@@ -425,14 +423,14 @@ class Player(Bot):
             out_of_range = 0.15
             reraise_cutoff = 0.8
             lead_cutoff = 0.6
-            cbet_cutoff = 0.3
+            cbet_cutoff = 0.0
             lead_bluff = 0.1
             check_bluff = 0.2
         else:
             out_of_range = 0.2
             reraise_cutoff = 0.85
             lead_cutoff = 0.7
-            cbet_cutoff = 0.6
+            cbet_cutoff = 0.0
             lead_bluff = 0.1
             check_bluff = 0.2
 
@@ -464,7 +462,7 @@ class Player(Bot):
                 if scared_strength > lead_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
-                else:
+                else: 
                     my_action = flat_action
             else:
                 if scared_strength > cbet_cutoff: 
