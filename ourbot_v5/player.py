@@ -106,15 +106,16 @@ class Player(Bot):
         # PERCENTILES are rounded up, i.e. best hand is 100% and worst hand is > 0%
 
         # PREFLOP
-        self.open_cutoff = 70 # > 0.45
-        self.open_defend = 40 # > 0.52
-        self.open_reraise = 10 # > 0.60%
+        self.open_cutoff = 80
+        self.open_defend = 50
+        self.open_reraise = 20
         
-        self.bb_defend = 50 # top 50%
-        self.bb_reraise = 24 # > 0.559
-        self.bb_redefend = 13 # > 0.59
+        self.bb_limpraise = 90
+        self.bb_defend = 60
+        self.bb_reraise = 30
+        self.bb_redefend = 15
 
-        self.preflop_allin = 6 # > 0.62
+        self.preflop_allin = 10
 
         self.guaranteed_win = False
         load_preflop_equity()
@@ -358,7 +359,7 @@ class Player(Bot):
 
         # PREFLOP casework
         rev_percentile = 100 - get_preflop_percentile(hole)
-        # if SB, open if strength > 0.42
+        # if SB, open
         if street < 3 and not self.big_blind and continue_cost == 1:
             if rev_percentile < self.open_cutoff:
                 my_action = aggro_action
@@ -366,7 +367,7 @@ class Player(Bot):
             else:
                 my_action = passive_action
                 return my_action
-        # if SB, defend against 3-bet if strength > 0.50 and reraise if strength > 0.60
+        # if SB, defend against 3-bet
         if street < 3 and not self.big_blind and continue_cost > 1 and my_pip < 10:
             if rev_percentile < self.open_reraise:
                 my_action = aggro_action
@@ -377,7 +378,7 @@ class Player(Bot):
             else:
                 my_action = passive_action
                 return my_action
-        # if SB, jam against 5-bet if strength > 0.62
+        # if SB, jam against 5-bet
         # note that we never defend, currently because our post-flop play is weak
         if street < 3 and not self.big_blind and my_pip >= 10:
             if rev_percentile < self.preflop_allin:
@@ -386,15 +387,15 @@ class Player(Bot):
             else:
                 my_action = passive_action
                 return my_action
-        # if BB, do not allow limpers if strength > 0.42
+        # if BB, do not allow limpers
         if street < 3 and self.big_blind and continue_cost == 0:
-            if rev_percentile < self.open_cutoff:
+            if rev_percentile < self.bb_limpraise:
                 my_action = aggro_action
                 return my_action
             else:
                 my_action = flat_action
                 return my_action
-        # if BB, defend against an open if strength > 0.5 and reraise if strength > 0.559
+        # if BB, defend against an open
         if street < 3 and self.big_blind and continue_cost < 10:
             if rev_percentile < self.bb_reraise:
                 my_action = aggro_action
@@ -405,7 +406,7 @@ class Player(Bot):
             else:
                 my_action = passive_action
                 return my_action
-        # if BB, all-in against a 4bet if strength > 0.62 and defend if strength > 0.58
+        # if BB, all-in against a 4bet
         if street < 3 and self.big_blind and continue_cost >= 10:
             if rev_percentile < self.preflop_allin:
                 my_action = jam_action
@@ -417,29 +418,22 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
 
-        # CURRENT VALUES:
-        # flop scare factor = 0.1
-        # turn scare factor = 0.15
-        # river scare factor = 0.2
-        # reraise flop if 0.8, lead if 0.6
-        # reraise turn if 0.8, lead if 0.6
-        # reraise river if 0.85, lead if 0.7
         if street == 3:
             out_of_range = 0.1
-            reraise_cutoff = 0.8
-            lead_cutoff = 0.6
+            reraise_cutoff = 0.75
+            lead_cutoff = 0.5
             cbet_cutoff = 0.0
             lead_bluff = 0.1
             check_bluff = 0.2
         elif street == 4:
-            out_of_range = 0.2
+            out_of_range = 0.15
             reraise_cutoff = 0.8
             lead_cutoff = 0.6
             cbet_cutoff = 0.0
             lead_bluff = 0.1
             check_bluff = 0.2
         else:
-            out_of_range = 0.3
+            out_of_range = 0.2
             reraise_cutoff = 0.85
             lead_cutoff = 0.7
             cbet_cutoff = 0.0
@@ -448,7 +442,7 @@ class Player(Bot):
 
 
         if continue_cost > 0:
-            self.num_raises += 1
+            self.num_raises += 2
 
         scared_strength = strength
 
@@ -459,9 +453,7 @@ class Player(Bot):
         scared_strength = max(0.1,scared_strength)
 
         if continue_cost > 0:
-
             pot_odds = continue_cost/(pot_total + continue_cost)
-
             if scared_strength >= pot_odds: # nonnegative EV decision
                 if scared_strength > reraise_cutoff: 
                     my_action = aggro_action
@@ -476,21 +468,11 @@ class Player(Bot):
                 if scared_strength > lead_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
-                elif scared_strength < lead_bluff and random.random() < (scared_strength+lead_bluff)/(scared_strength + 2*lead_bluff):
-                    my_action = aggro_action
-                    if street == 5:
-                        my_action = jam_action
-                    self.num_raises += 1
                 else: 
                     my_action = flat_action
             else:
                 if scared_strength > cbet_cutoff: 
                     my_action = aggro_action
-                    self.num_raises += 1
-                elif scared_strength < check_bluff and random.random() < (scared_strength+check_bluff)/(scared_strength + 2*check_bluff):
-                    my_action = aggro_action
-                    if street == 5:
-                        my_action = jam_action
                     self.num_raises += 1
                 else: 
                     my_action = flat_action
