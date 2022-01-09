@@ -118,6 +118,8 @@ class Player(Bot):
         self.preflop_allin = 10
 
         self.guaranteed_win = False
+        self.max_loss = 200
+
         load_preflop_equity()
 
     def calc_strength(self, hole, iters, board):
@@ -170,8 +172,6 @@ class Player(Bot):
 
             if our_hand_value > opp_hand_value:
                 score += weight
-            elif our_hand_value == opp_hand_value:
-                score += weight/2
             else: 
                 score += 0
                 
@@ -203,17 +203,29 @@ class Player(Bot):
         self.num_raises = 0
 
         remain = 1000 - round_num + 1
+
         if remain % 2 == 0:
             mincost = 3 * (remain // 2)
+            opp_mincost = 3 * (remain // 2)
+            if self.big_blind:
+                opp_mincost -= 1
+            else:
+                opp_mincost -=2
         else:
             mincost = 3 * (remain // 2)
+            opp_mincost = 3 * (remain // 2)
             if self.big_blind:
                 mincost += 2
             else:
                 mincost += 1
         
-        # if mincost < my_bankroll:
-        #     self.guaranteed_win = True
+        if mincost < my_bankroll:
+            self.guaranteed_win = True
+
+        self.max_loss = my_bankroll + opp_mincost
+
+        if self.maxloss <= 0:
+            self.maxloss = 200
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -341,6 +353,12 @@ class Player(Bot):
             my_action = passive_action
             return my_action
 
+        if my_contribution > self.max_loss:
+            my_action = jam_action
+            return my_action
+        elif my_contribution - my_pip + raise_amount > self.max_loss:
+            aggro_action = jam_action
+
         # PREFLOP casework
         rev_percentile = 100 - get_preflop_percentile(hole)
         rev_percentile = max(rev_percentile,0)
@@ -406,32 +424,26 @@ class Player(Bot):
         if street == 3:
             out_of_range = 0.1
             reraise_cutoff = 0.75
-            lead_cutoff = 0.5
+            lead_cutoff = 0.0
             cbet_cutoff = 0.0
-            lead_bluff = 0.1
-            check_bluff = 0.2
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
             lead_cutoff = 0.0
             cbet_cutoff = 0.0
-            lead_bluff = 0.1
-            check_bluff = 0.2
         else:
             out_of_range = 0.2
             reraise_cutoff = 0.85
-            lead_cutoff = 0.7
+            lead_cutoff = 0.5
             cbet_cutoff = 0.0
-            lead_bluff = 0.1
-            check_bluff = 0.2
 
 
         if continue_cost > 0:
-            self.num_raises += 2
+            self.num_raises += 2 * continue_cost/my_contribution
 
         scared_strength = strength
 
-        for _ in range(self.num_raises):
+        for _ in range(int(self.num_raises)):
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
 
         scared_strength = max(0.1,scared_strength)
