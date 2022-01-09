@@ -109,6 +109,7 @@ class Player(Bot):
         self.open_cutoff = 80
         self.open_defend = 50
         self.open_reraise = 20
+
         
         self.bb_limpraise = 90
         self.bb_defend = 60
@@ -119,6 +120,9 @@ class Player(Bot):
 
         self.guaranteed_win = False
         self.max_loss = 200
+
+        self.preflop_multiplier = 1.0
+        self.postflop_multiplier = 1.0
 
         load_preflop_equity()
 
@@ -245,6 +249,24 @@ class Player(Bot):
         street = previous_state.street  # 0, 3, 4, or 5 representing when this round ended
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
+
+        if street == 5 and len(opp_cards) > 0:
+            if my_delta > 0:
+                self.postflop_multiplier *= 1.02
+                self.postflop_multiplier = min(self.postflop_multiplier,2)
+            elif my_delta < 0:
+                self.postflop_multiplier *= 0.98
+                self.postflop_multiplier = max(self.postflop_multiplier,0.5)
+        
+        if street == 0:
+            if my_delta > 0:
+                self.preflop_multiplier *= 1.02
+                self.preflop_multiplier = min(self.preflop_multiplier,2)
+                
+            elif my_delta < 0:
+                self.preflop_multiplier *= 0.98
+                self.preflop_multipleir = max(self.preflop_multiplier,0.5)
+                
     
     def get_board_texture(self,board):
         suits = [str(card)[1] for card in board]
@@ -362,6 +384,7 @@ class Player(Bot):
         # PREFLOP casework
         rev_percentile = 100 - get_preflop_percentile(hole)
         rev_percentile = max(rev_percentile,0)
+        rev_percentile *= self.preflop_multiplier
         # if SB, open
         if street < 3 and not self.big_blind and continue_cost == 1:
             if rev_percentile < self.open_cutoff:
@@ -424,12 +447,12 @@ class Player(Bot):
         if street == 3:
             out_of_range = 0.1
             reraise_cutoff = 0.75
-            lead_cutoff = 0.0
+            lead_cutoff = 0.2
             cbet_cutoff = 0.0
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
-            lead_cutoff = 0.0
+            lead_cutoff = 0.3
             cbet_cutoff = 0.0
         else:
             out_of_range = 0.2
@@ -450,7 +473,7 @@ class Player(Bot):
 
         if continue_cost > 0:
             pot_odds = continue_cost/(pot_total + continue_cost)
-            if scared_strength >= pot_odds: # nonnegative EV decision
+            if scared_strength * self.postflop_multiplier >= pot_odds: # nonnegative EV decision
                 if scared_strength > reraise_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
