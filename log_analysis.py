@@ -21,7 +21,16 @@ def process_preflop_bets(round):
     bets.append((round[0][0], 1))
     bets.append((round[1][0], 2))
     for step in round[4:]:
-        if 
+        if 'call' in step:
+            bets.append((step[0], bets[-1][1]))
+        elif 'raise' in step:
+            bets.append((step[0], int(step.split()[-1])))
+        elif 'fold' in step:
+            bets.append((step[0], 0))
+        else:
+            pass
+    return bets
+
 
 class Round:
     def __init__(self, round):
@@ -31,6 +40,15 @@ class Round:
         turn_idx = None
         river_idx = None
         showdown_idx = None
+
+        if round[-1][0] == 'A':
+            self.deltaA = int(round[-1].split()[-1])
+            self.deltaB = int(round[-2].split()[-1])
+        else:
+            self.deltaA = int(round[-2].split()[-1])
+            self.deltaB = int(round[-1].split()[-1])
+            
+
         for i in range(len(round)):
             if 'Flop' in round[i]:
                 flop_idx = i
@@ -40,40 +58,61 @@ class Round:
                 river_idx = i
             if 'shows' in round[i] and showdown_idx is None:
                 showdown_idx = i
-        preflop = process_preflop_bets(round[1:flop_idx])
-        print(preflop)
+        
+        self.preflop_bets = process_preflop_bets(round[1:flop_idx])
         
 
+        
 
-for round in rounds:
-    small_blind = round[1][0]
-    big_blind = round[2][0]
-    first_raiser = None
-    raise_amount = 0
-    if 'calls' in round[5]:
-        # limp
-        first_raiser = round[5][0]
-        raise_amount = 2
-    else:
-        for line in round:
-            if 'raises' in line:
-                first_raiser = line[0]
-                raise_amount = int(line.split()[-1])
-                break
-            if 'Flop' in line:
-                break
-    if first_raiser is not None:
-        num_opens[first_raiser] += 1
-        total_open_amount[first_raiser] += raise_amount
-    # if first_raiser == 'A':
-        print(f'Open: {first_raiser} to {raise_amount}')
-        x = first_raiser + ' ' + str(raise_amount)
-        if x in final:
-            final[x] += 1
+rounds = [Round(r) for r in rounds]
+
+a_fold = 0
+b_fold = 0
+a_win = 0
+b_win = 0
+for r in rounds:
+    if r.preflop_bets[-1][1] == 0 and r.preflop_bets[-2][1] > 6:
+        if r.preflop_bets[-1][0] == 'A':
+            a_fold += 1
+            b_win += r.deltaB
         else:
-            final[x] = 1
+            b_fold += 1
+            a_win += r.deltaA
 
-print(num_opens)
-print({x: total_open_amount[x]/num_opens[x] for x in num_opens})
+print(a_fold, b_fold)
+print(a_win, b_win)
 
-print(final)
+
+# for round in rounds:
+#     r = Round(round)
+    # small_blind = round[1][0]
+    # big_blind = round[2][0]
+    # first_raiser = None
+    # raise_amount = 0
+    # if 'calls' in round[5]:
+    #     # limp
+    #     first_raiser = round[5][0]
+    #     raise_amount = 2
+    # else:
+    #     for line in round:
+    #         if 'raises' in line:
+    #             first_raiser = line[0]
+    #             raise_amount = int(line.split()[-1])
+    #             break
+    #         if 'Flop' in line:
+    #             break
+    # if first_raiser is not None:
+    #     num_opens[first_raiser] += 1
+    #     total_open_amount[first_raiser] += raise_amount
+    # # if first_raiser == 'A':
+    #     print(f'Open: {first_raiser} to {raise_amount}')
+    #     x = first_raiser + ' ' + str(raise_amount)
+    #     if x in final:
+    #         final[x] += 1
+    #     else:
+    #         final[x] = 1
+
+# print(num_opens)
+# print({x: total_open_amount[x]/num_opens[x] for x in num_opens})
+
+# print(final)
