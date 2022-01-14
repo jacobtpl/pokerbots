@@ -9,6 +9,7 @@ from skeleton.runner import parse_args, run_bot
 
 import random 
 import eval7
+import math
 
 EQUITY_MAP = {}
 PERCENTILE_MAP = {}
@@ -94,14 +95,6 @@ class Player(Bot):
         Returns:
         Nothing.
         '''
-        # self.played_bb = 0
-        # self.played_sb = 0
-        # self.opp_defend_bb = 0
-        # self.opp_fold_bb = 0
-        # self.opp_raise_bb = 0
-        # self.opp_open_sb = 0
-        # self.opp_fold_sb = 0
-        # self.opp_limp_sb = 0
 
         # PERCENTILES are rounded up, i.e. best hand is 100% and worst hand is > 0%
 
@@ -109,6 +102,7 @@ class Player(Bot):
         self.open_cutoff = 80
         self.open_defend = 50
         self.open_reraise = 20
+        self.open_redefend = 15
 
         
         self.bb_limpraise = 90
@@ -123,6 +117,14 @@ class Player(Bot):
 
         self.preflop_multiplier = 1.0
         self.postflop_multiplier = 1.0
+
+        self.preflop_ratio = 1.0 # ranges from 2x to 5x raises
+        self.flop_ratio = 0.6
+        self.turn_ratio = 0.6
+        self.river_ratio = 0.6
+
+        self.sum_bet_size = 0
+        self.cnt_bet_size = 0
 
         load_preflop_equity()
 
@@ -174,7 +176,7 @@ class Player(Bot):
             
             weight = get_preflop_equity(opp_hole)
 
-            if our_hand_value > opp_hand_value:
+            if our_hand_value >= opp_hand_value:
                 score += weight
             else: 
                 score += 0
@@ -228,9 +230,6 @@ class Player(Bot):
 
         self.max_loss = my_bankroll + opp_mincost
 
-        if self.max_loss <= 0:
-            self.max_loss = 200
-
 
     def handle_round_over(self, game_state, terminal_state, active):
         '''
@@ -250,7 +249,7 @@ class Player(Bot):
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
 
-        if street == 5 and len(opp_cards) > 0:
+        if street == 5 and len(opp_cards) > 0: # showdown
             if my_delta > 0:
                 self.postflop_multiplier *= 1.02
                 self.postflop_multiplier = min(self.postflop_multiplier,2)
@@ -266,6 +265,39 @@ class Player(Bot):
             elif my_delta < 0:
                 self.preflop_multiplier *= 0.98
                 self.preflop_multipleir = max(self.preflop_multiplier,0.5)
+
+        if street > 0:
+            if my_delta > 0:
+                self.preflop_ratio *= 1.01
+                self.preflop_ratio = min(self.preflop_ratio,2)
+            elif my_delta < 0:
+                self.preflop_ratio *= 0.99
+                self.preflop_ratio = max(self.preflop_ratio,0.5)
+
+        if street > 3:
+            if my_delta > 0:
+                self.flop_ratio *= 1.01
+                self.flop_ratio = min(self.flop_ratio,0.75)
+            elif my_delta < 0:
+                self.flop_ratio *= 0.99
+                self.flop_ratio = max(self.flop_ratio,0.5)
+        
+        if street > 4:
+            if my_delta > 0:
+                self.turn_ratio *= 1.01
+                self.turn_ratio = min(self.turn_ratio,0.75)
+            elif my_delta < 0:
+                self.turn_ratio *= 0.99
+                self.turn_ratio = max(self.turn_ratio,0.5)
+        
+        if street == 5 and len(opp_cards) > 0: # showdown
+            if my_delta > 0:
+                self.river_ratio *= 1.01
+                self.river_ratio = min(self.river_ratio,0.75)
+            elif my_delta < 0:
+                self.river_ratio *= 0.99
+                self.river_ratio = max(self.river_ratio,0.5)
+
                 
     
     def get_board_texture(self,board):
@@ -333,17 +365,18 @@ class Player(Bot):
         _MONTE_CARLO_ITERS = 200
         strength = self.calc_strength(hole, _MONTE_CARLO_ITERS, board)
         # bet to pot ratio
-        ratio = 0.7
         # if street == 3:
         #     ratio = 0.35 + self.get_board_texture(board)/37 * 0.5
-
         # raise logic 
-        if street < 3: #preflop 3x
-            raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
-        else: #postflop half pot
-            raise_amount = int(my_pip + continue_cost + ratio*(pot_total + continue_cost))
-        # raise_amount = int(raise_amount * 1.3)
-        
+        if street < 3:
+            raise_amount = int(my_pip + continue_cost + self.preflop_ratio * (pot_total + continue_cost))
+        elif street == 3:
+            raise_amount = int(my_pip + continue_cost + self.flop_ratio* (pot_total + continue_cost))
+        elif street == 4:
+            raise_amount = int(my_pip + continue_cost + self.turn_ratio*(pot_total + continue_cost))
+        else:
+            raise_amount = int(my_pip + continue_cost + self.river_ratio*(pot_total + continue_cost))
+
         # ensure raises are legal
         raise_amount = max([min_raise, raise_amount])
         raise_amount = min([max_raise, raise_amount])
@@ -376,11 +409,15 @@ class Player(Bot):
             my_action = passive_action
             return my_action
 
-        if my_contribution > self.max_loss:
+        if my_contribution > self.max_loss and -opp_contribution <= self.max_loss:
             my_action = jam_action
             return my_action
-        elif my_contribution - my_pip + raise_amount > self.max_loss:
+
+        if my_contribution - my_pip + raise_amount > self.max_loss and -opp_contribution <= self.max_loss:
             aggro_action = jam_action
+            
+        if my_contribution + continue_cost > self.max_loss and -opp_contribution <= self.max_loss:
+            flat_action = jam_action
 
         # PREFLOP casework
         rev_percentile = 100 - get_preflop_percentile(hole)
@@ -395,7 +432,7 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
         # if SB, defend against 3-bet
-        if street < 3 and not self.big_blind and continue_cost > 1 and my_pip < 10:
+        if street < 3 and not self.big_blind and continue_cost > 1 and continue_cost <= 30:
             if rev_percentile < self.open_reraise:
                 my_action = aggro_action
                 return my_action
@@ -406,10 +443,12 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
         # if SB, jam against 5-bet
-        # note that we never defend, currently because our post-flop play is weak
-        if street < 3 and not self.big_blind and my_pip >= 10:
+        if street < 3 and not self.big_blind:
             if rev_percentile < self.preflop_allin:
                 my_action = jam_action
+                return my_action
+            elif rev_percentile < self.open_redefend:
+                my_action = flat_action
                 return my_action
             else:
                 my_action = passive_action
@@ -463,8 +502,19 @@ class Player(Bot):
 
 
         if continue_cost > 0:
-            self.num_raises += 2 * min(0.8, continue_cost/my_contribution) / 0.8
-        
+            self.sum_bet_size += continue_cost/my_contribution
+            self.cnt_bet_size += 1
+            # old_pot = my_contribution + opp_contribution - opp_pip
+            # if opp_pip > old_pot:
+            #     # overbet
+            #     capped_continue_cost = old_pot - my_pip
+            #     assert capped_continue_cost >= 0
+            #     capped_continue_cost = max(0, capped_continue_cost)
+            #     self.num_raises += capped_continue_cost/my_contribution
+            # else:
+            self.num_raises += (continue_cost/my_contribution) / (self.sum_bet_size / self.cnt_bet_size)
+            # self.num_raises += 2 * min(1, continue_cost / old_pot)
+
         scared_strength = strength
 
         for _ in range(int(self.num_raises)):
