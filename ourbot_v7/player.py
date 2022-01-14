@@ -269,7 +269,7 @@ class Player(Bot):
         if street > 0:
             if my_delta > 0:
                 self.preflop_ratio *= 1.01
-                self.preflop_ratio = min(self.preflop_ratio,2)
+                self.preflop_ratio = min(self.preflop_ratio,3)
             elif my_delta < 0:
                 self.preflop_ratio *= 0.99
                 self.preflop_ratio = max(self.preflop_ratio,0.5)
@@ -277,26 +277,26 @@ class Player(Bot):
         if street > 3:
             if my_delta > 0:
                 self.flop_ratio *= 1.01
-                self.flop_ratio = min(self.flop_ratio,0.75)
+                self.flop_ratio = min(self.flop_ratio,1)
             elif my_delta < 0:
                 self.flop_ratio *= 0.99
-                self.flop_ratio = max(self.flop_ratio,0.5)
+                self.flop_ratio = max(self.flop_ratio,0.33)
         
         if street > 4:
             if my_delta > 0:
                 self.turn_ratio *= 1.01
-                self.turn_ratio = min(self.turn_ratio,0.75)
+                self.turn_ratio = min(self.turn_ratio,1)
             elif my_delta < 0:
                 self.turn_ratio *= 0.99
-                self.turn_ratio = max(self.turn_ratio,0.5)
+                self.turn_ratio = max(self.turn_ratio,0.33)
         
         if street == 5 and len(opp_cards) > 0: # showdown
             if my_delta > 0:
                 self.river_ratio *= 1.01
-                self.river_ratio = min(self.river_ratio,0.75)
+                self.river_ratio = min(self.river_ratio,1)
             elif my_delta < 0:
                 self.river_ratio *= 0.99
-                self.river_ratio = max(self.river_ratio,0.5)
+                self.river_ratio = max(self.river_ratio,0.33)
 
                 
     
