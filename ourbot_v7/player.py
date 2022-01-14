@@ -110,13 +110,15 @@ class Player(Bot):
         self.bb_reraise = 30
         self.bb_redefend = 15
 
-        self.preflop_allin = 10
+        self.preflop_allin = 8
 
         self.guaranteed_win = False
         self.max_loss = 200
 
         self.preflop_multiplier = 1.0
-        self.postflop_multiplier = 1.0
+        self.flop_multiplier = 1.0
+        self.turn_multiplier = 1.0
+        self.river_multiplier = 1.0
 
         self.preflop_ratio = 1.0 # ranges from 2x to 5x raises
         self.flop_ratio = 0.6
@@ -230,6 +232,16 @@ class Player(Bot):
 
         self.max_loss = my_bankroll + opp_mincost
 
+        self.bet_preflop = 0
+        self.bet_flop = 0
+        self.bet_turn = 0
+        self.bet_river = 0
+        self.called_preflop = 0
+        self.called_flop = 0
+        self.called_turn = 0
+        self.called_river = 0
+        self.allin_preflop = 0
+
 
     def handle_round_over(self, game_state, terminal_state, active):
         '''
@@ -248,55 +260,87 @@ class Player(Bot):
         street = previous_state.street  # 0, 3, 4, or 5 representing when this round ended
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
+        if street == 5 and len(opp_cards) > 0:
+            for _ in range(self.allin_preflop):
+                if my_delta > 0:
+                    self.preflop_allin *= 1.05
+                    self.preflop_allin = min(self.preflop_allin,15)
+                elif my_delta < 0:
+                    self.preflop_allin *= 0.952
+                    self.preflop_allin = max(self.preflop_allin,5)
 
         if street == 5 and len(opp_cards) > 0: # showdown
-            if my_delta > 0:
-                self.postflop_multiplier *= 1.02
-                self.postflop_multiplier = min(self.postflop_multiplier,2)
-            elif my_delta < 0:
-                self.postflop_multiplier *= 0.98
-                self.postflop_multiplier = max(self.postflop_multiplier,0.5)
+            for _ in range(self.called_river):
+                if my_delta > 0:
+                    self.river_multiplier *= 1.02
+                    self.river_multiplier = min(self.river_multiplier,2)
+                elif my_delta < 0:
+                    self.river_multiplier *= 0.98
+                    self.river_multiplier = max(self.river_multiplier,0.5)
         
-        if street == 0:
-            if my_delta > 0:
-                self.preflop_multiplier *= 1.02
-                self.preflop_multiplier = min(self.preflop_multiplier,2)
-                
-            elif my_delta < 0:
-                self.preflop_multiplier *= 0.98
-                self.preflop_multipleir = max(self.preflop_multiplier,0.5)
-
         if street > 0:
-            if my_delta > 0:
-                self.preflop_ratio *= 1.01
-                self.preflop_ratio = min(self.preflop_ratio,3)
-            elif my_delta < 0:
-                self.preflop_ratio *= 0.99
-                self.preflop_ratio = max(self.preflop_ratio,0.5)
-
+            for _ in range(self.called_preflop):
+                if my_delta > 0:
+                    self.preflop_multiplier *= 1.02
+                    self.preflop_multiplier = min(self.preflop_multiplier,2) 
+                elif my_delta < 0:
+                    self.preflop_multiplier *= 0.98
+                    self.preflop_multiplier = max(self.preflop_multiplier,0.5)
+        
         if street > 3:
-            if my_delta > 0:
-                self.flop_ratio *= 1.01
-                self.flop_ratio = min(self.flop_ratio,1)
-            elif my_delta < 0:
-                self.flop_ratio *= 0.99
-                self.flop_ratio = max(self.flop_ratio,0.33)
+            for _ in range(self.called_flop):
+                if my_delta > 0:
+                    self.flop_multiplier *= 1.02
+                    self.flop_multiplier = min(self.flop_multiplier,2)
+                elif my_delta < 0:
+                    self.flop_multiplier *= 0.98
+                    self.flop_multiplier = max(self.flop_multiplier,0.5)
         
         if street > 4:
-            if my_delta > 0:
-                self.turn_ratio *= 1.01
-                self.turn_ratio = min(self.turn_ratio,1)
-            elif my_delta < 0:
-                self.turn_ratio *= 0.99
-                self.turn_ratio = max(self.turn_ratio,0.33)
+            for _ in range(self.called_turn):
+                if my_delta > 0:
+                    self.turn_multiplier *= 1.02
+                    self.turn_multiplier = min(self.turn_multiplier,1)
+                elif my_delta < 0:
+                    self.turn_multiplier *= 0.98
+                    self.turn_multiplier = max(self.turn_multiplier,0.33)
+
+
+        if street > 0:
+            for _ in range(self.bet_preflop):
+                if my_delta > 0:
+                    self.preflop_ratio *= 1.02
+                    self.preflop_ratio = min(self.preflop_ratio,3)
+                elif my_delta < 0:
+                    self.preflop_ratio *= 0.98
+                    self.preflop_ratio = max(self.preflop_ratio,0.5)
+
+        if street > 3:
+            for _ in range(self.bet_flop):
+                if my_delta > 0:
+                    self.flop_ratio *= 1.02
+                    self.flop_ratio = min(self.flop_ratio,1)
+                elif my_delta < 0:
+                    self.flop_ratio *= 0.98
+                    self.flop_ratio = max(self.flop_ratio,0.33)
+        
+        if street > 4:
+            for _ in range(self.bet_turn):
+                if my_delta > 0:
+                    self.turn_ratio *= 1.02
+                    self.turn_ratio = min(self.turn_ratio,1)
+                elif my_delta < 0:
+                    self.turn_ratio *= 0.98
+                    self.turn_ratio = max(self.turn_ratio,0.33)
         
         if street == 5 and len(opp_cards) > 0: # showdown
-            if my_delta > 0:
-                self.river_ratio *= 1.01
-                self.river_ratio = min(self.river_ratio,1)
-            elif my_delta < 0:
-                self.river_ratio *= 0.99
-                self.river_ratio = max(self.river_ratio,0.33)
+            for _ in range(self.bet_river):
+                if my_delta > 0:
+                    self.river_ratio *= 1.02
+                    self.river_ratio = min(self.river_ratio,1)
+                elif my_delta < 0:
+                    self.river_ratio *= 0.98
+                    self.river_ratio = max(self.river_ratio,0.33)
 
                 
     
@@ -427,6 +471,8 @@ class Player(Bot):
         if street < 3 and not self.big_blind and continue_cost == 1:
             if rev_percentile < self.open_cutoff:
                 my_action = aggro_action
+                self.bet_preflop += 1
+                self.called_preflop += 1
                 return my_action
             else:
                 my_action = passive_action
@@ -435,9 +481,12 @@ class Player(Bot):
         if street < 3 and not self.big_blind and continue_cost > 1 and continue_cost <= 30:
             if rev_percentile < self.open_reraise:
                 my_action = aggro_action
+                self.bet_preflop += 1
+                self.called_preflop += 1
                 return my_action
             elif rev_percentile < self.open_defend:
                 my_action = flat_action
+                self.called_preflop += 1
                 return my_action
             else:
                 my_action = passive_action
@@ -446,9 +495,12 @@ class Player(Bot):
         if street < 3 and not self.big_blind:
             if rev_percentile < self.preflop_allin:
                 my_action = jam_action
+                self.allin_preflop += 1
+                self.called_preflop += 1
                 return my_action
             elif rev_percentile < self.open_redefend:
                 my_action = flat_action
+                self.called_preflop += 1
                 return my_action
             else:
                 my_action = passive_action
@@ -457,28 +509,36 @@ class Player(Bot):
         if street < 3 and self.big_blind and continue_cost == 0:
             if rev_percentile < self.bb_limpraise:
                 my_action = aggro_action
+                self.bet_preflop += 1
+                self.called_preflop += 1
                 return my_action
             else:
                 my_action = flat_action
                 return my_action
         # if BB, defend against an open
-        if street < 3 and self.big_blind and continue_cost < 10:
+        if street < 3 and self.big_blind and continue_cost <= 15:
             if rev_percentile < self.bb_reraise:
                 my_action = aggro_action
+                self.bet_preflop += 1
+                self.called_preflop += 1
                 return my_action
             elif rev_percentile < self.bb_defend:
                 my_action = flat_action
+                self.called_preflop += 1
                 return my_action
             else:
                 my_action = passive_action
                 return my_action
         # if BB, all-in against a 4bet
-        if street < 3 and self.big_blind and continue_cost >= 10:
+        if street < 3 and self.big_blind and continue_cost > 15:
             if rev_percentile < self.preflop_allin:
                 my_action = jam_action
+                self.allin_preflop += 1
+                self.called_preflop += 1
                 return my_action
-            elif strength > self.bb_redefend:
+            elif rev_percentile < self.bb_redefend:
                 my_action = flat_action
+                self.called_preflop += 1
                 return my_action
             else:
                 my_action = passive_action
@@ -487,12 +547,12 @@ class Player(Bot):
         if street == 3:
             out_of_range = 0.1
             reraise_cutoff = 0.75
-            lead_cutoff = 0.2
+            lead_cutoff = 0.3
             cbet_cutoff = 0.0
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
-            lead_cutoff = 0.3
+            lead_cutoff = 0.4
             cbet_cutoff = 0.0
         else:
             out_of_range = 0.2
@@ -501,6 +561,9 @@ class Player(Bot):
             cbet_cutoff = 0.0
 
 
+        if continue_cost > 0:
+            self.num_raises += min(2, continue_cost/my_contribution)
+        
         if continue_cost > 0:
             self.sum_bet_size += continue_cost/my_contribution
             self.cnt_bet_size += 1
@@ -512,7 +575,9 @@ class Player(Bot):
             #     capped_continue_cost = max(0, capped_continue_cost)
             #     self.num_raises += capped_continue_cost/my_contribution
             # else:
-            self.num_raises += (continue_cost/my_contribution) / (self.sum_bet_size / self.cnt_bet_size)
+
+            #self.num_raises += (continue_cost/my_contribution) / (self.sum_bet_size / self.cnt_bet_size)
+
             # self.num_raises += 2 * min(1, continue_cost / old_pot)
 
         scared_strength = strength
@@ -521,13 +586,30 @@ class Player(Bot):
             scared_strength = (scared_strength - out_of_range)/(1 - out_of_range)
 
         scared_strength = max(0.1,scared_strength)
-
+        if street == 3:
+            multiplier = self.flop_multiplier
+        elif street == 4:
+            multiplier = self.turn_multiplier
+        else:
+            multiplier = self.river_multiplier
         if continue_cost > 0:
             pot_odds = continue_cost/(pot_total + continue_cost)
-            if scared_strength * self.postflop_multiplier >= pot_odds: # nonnegative EV decision
-                if scared_strength > reraise_cutoff: 
+            if scared_strength * multiplier >= pot_odds: # nonnegative EV decision
+                if street == 3:
+                    self.called_flop += 1
+                elif street == 4:
+                    self.called_turn += 1
+                elif street == 5:
+                    self.called_river += 1
+                if scared_strength * multiplier > reraise_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
+                    if street == 3:
+                        self.bet_flop += 2
+                    elif street == 4:
+                        self.bet_turn += 2
+                    elif street == 5:
+                        self.bet_river += 2
                 else: 
                     my_action = flat_action
             
@@ -538,12 +620,24 @@ class Player(Bot):
                 if scared_strength > lead_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
+                    if street == 3:
+                        self.bet_flop += 1
+                    elif street == 4:
+                        self.bet_turn += 1
+                    elif street == 5:
+                        self.bet_river += 1
                 else:
                     my_action = flat_action
             else:
                 if scared_strength > cbet_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
+                    if street == 3:
+                        self.bet_flop += 1
+                    elif street == 4:
+                        self.bet_turn += 1
+                    elif street == 5:
+                        self.bet_river += 1
                 else: 
                     my_action = flat_action
         return my_action
