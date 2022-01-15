@@ -100,17 +100,17 @@ class Player(Bot):
 
         # PREFLOP
         self.open_cutoff = 80
-        self.open_defend = 50
-        self.open_reraise = 20
-        self.open_redefend = 15
+        self.open_defend = 55
+        self.open_reraise = 25
+        self.open_redefend = 20
 
         
         self.bb_limpraise = 90
         self.bb_defend = 60
         self.bb_reraise = 30
-        self.bb_redefend = 15
+        self.bb_redefend = 22
 
-        self.preflop_allin = 8
+        self.preflop_allin = 9
 
         self.guaranteed_win = False
         self.max_loss = 200
@@ -306,14 +306,14 @@ class Player(Bot):
                     self.turn_multiplier = max(self.turn_multiplier,0.33)
 
 
-        if street > 0:
-            for _ in range(self.bet_preflop):
-                if my_delta > 0:
-                    self.preflop_ratio *= 1.02
-                    self.preflop_ratio = min(self.preflop_ratio,3)
-                elif my_delta < 0:
-                    self.preflop_ratio *= 0.98
-                    self.preflop_ratio = max(self.preflop_ratio,0.5)
+        # if street > 0:
+        #     for _ in range(self.bet_preflop):
+        #         if my_delta > 0:
+        #             self.preflop_ratio *= 1.02
+        #             self.preflop_ratio = min(self.preflop_ratio,3)
+        #         elif my_delta < 0:
+        #             self.preflop_ratio *= 0.98
+        #             self.preflop_ratio = max(self.preflop_ratio,0.5)
 
         if street > 3:
             for _ in range(self.bet_flop):
