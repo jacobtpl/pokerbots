@@ -123,7 +123,9 @@ class Player(Bot):
         self.max_loss = 200
 
         self.preflop_multiplier = 1.0
-        self.postflop_multiplier = 1.0
+        self.flop_multiplier = 1.0
+        self.turn_multiplier = 1.0
+        self.river_multiplier = 1.0
 
         self.sum_bet_size = 0
         self.cnt_bet_size = 0
@@ -232,9 +234,6 @@ class Player(Bot):
 
         self.max_loss = my_bankroll + opp_mincost
 
-        if self.max_loss <= 0:
-            self.max_loss = 200
-
 
     def handle_round_over(self, game_state, terminal_state, active):
         '''
@@ -256,11 +255,27 @@ class Player(Bot):
 
         if street == 5 and len(opp_cards) > 0:
             if my_delta > 0:
-                self.postflop_multiplier *= 1.02
-                self.postflop_multiplier = min(self.postflop_multiplier,2)
+                self.river_multiplier *= 1.02
+                self.river_multiplier = min(self.river_multiplier,2)
             elif my_delta < 0:
-                self.postflop_multiplier *= 0.98
-                self.postflop_multiplier = max(self.postflop_multiplier,0.5)
+                self.river_multiplier *= 0.98
+                self.river_multiplier = max(self.river_multiplier,0.5)
+
+        if street > 4:
+            if my_delta > 0:
+                self.turn_multiplier *= 1.02
+                self.turn_multiplier = min(self.turn_multiplier,2)
+            elif my_delta < 0:
+                self.turn_multiplier *= 0.98
+                self.turn_multiplier = max(self.turn_multiplier,0.5)
+        
+        if street > 3:
+            if my_delta > 0:
+                self.flop_multiplier *= 1.02
+                self.flop_multiplier = min(self.flop_multiplier,2)
+            elif my_delta < 0:
+                self.flop_multiplier *= 0.98
+                self.flop_multiplier = max(self.flop_multiplier,0.5)
         
         if street == 0:
             if my_delta > 0:
@@ -379,12 +394,16 @@ class Player(Bot):
             my_action = passive_action
             return my_action
 
-        if my_contribution > self.max_loss:
+        if my_contribution > self.max_loss and -opp_contribution <= self.max_loss:
             my_action = jam_action
             return my_action
-        elif my_contribution - my_pip + raise_amount > self.max_loss:
-            aggro_action = jam_action
 
+        if my_contribution - my_pip + raise_amount > self.max_loss and -opp_contribution <= self.max_loss:
+            aggro_action = jam_action
+            
+        if my_contribution + continue_cost > self.max_loss and -opp_contribution <= self.max_loss:
+            flat_action = jam_action
+        
         # PREFLOP casework
         rev_percentile = 100 - get_preflop_percentile(hole)
         rev_percentile = max(rev_percentile,0)
@@ -486,9 +505,18 @@ class Player(Bot):
 
         scared_strength = max(0.1,scared_strength)
 
+        multiplier = 1.0
+
+        if street == 3:
+            multiplier = self.flop_multiplier
+        elif street == 4:
+            multiplier = self.turn_multiplier
+        elif street == 5:
+            multiplier = self.river_multiplier
+
         if continue_cost > 0:
             pot_odds = continue_cost/(pot_total + continue_cost)
-            if scared_strength * self.postflop_multiplier >= pot_odds: # nonnegative EV decision
+            if scared_strength * multiplier >= pot_odds: # nonnegative EV decision
                 if scared_strength > reraise_cutoff: 
                     my_action = aggro_action
                     self.num_raises += 1
