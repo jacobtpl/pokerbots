@@ -127,9 +127,9 @@ class Player(Bot):
         self.turn_multiplier = 1.0
         self.river_multiplier = 1.0
 
-        self.flop_bluff = 0.5
-        self.turn_bluff = 0.5
-        self.river_bluff = 0.5
+        self.flop_bluff = 0.1
+        self.turn_bluff = 0.2
+        self.river_bluff = 0.3
 
         self.sum_bet_size = 0
         self.cnt_bet_size = 0
@@ -264,63 +264,63 @@ class Player(Bot):
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
 
-        change = 1 + (my_delta/10000)
+        change = (my_delta/10000)
 
         if street == 5 and len(opp_cards) > 0 and self.river_call:
             if my_delta > 0:
-                self.river_multiplier *= change
+                self.river_multiplier += change
                 self.river_multiplier = min(self.river_multiplier,2)
             elif my_delta < 0:
-                self.river_multiplier *= change
+                self.river_multiplier += change
                 self.river_multiplier = max(self.river_multiplier,0.5)
 
         if street > 4 and self.turn_call:
             if my_delta > 0:
-                self.turn_multiplier *= change
+                self.turn_multiplier += change
                 self.turn_multiplier = min(self.turn_multiplier,2)
             elif my_delta < 0:
-                self.turn_multiplier *= change
+                self.turn_multiplier += change
                 self.turn_multiplier = max(self.turn_multiplier,0.5)
         
         if street > 3 and self.flop_call:
             if my_delta > 0:
-                self.flop_multiplier *= change
+                self.flop_multiplier += change
                 self.flop_multiplier = min(self.flop_multiplier,2)
             elif my_delta < 0:
-                self.flop_multiplier *= change
+                self.flop_multiplier += change
                 self.flop_multiplier = max(self.flop_multiplier,0.5)
         
         if street > 0:
             if my_delta > 0:
-                self.preflop_multiplier *= change
+                self.preflop_multiplier += change
                 self.preflop_multiplier = min(self.preflop_multiplier,2)
                 
             elif my_delta < 0:
-                self.preflop_multiplier *= change
+                self.preflop_multiplier += change
                 self.preflop_multipleir = max(self.preflop_multiplier,0.5)
         
         if street >= 3 and self.flop_bluff:
             if my_delta > 0:
-                self.flop_bluff *= change
-                self.flop_bluff = min(self.flop_bluff,1)
+                self.flop_bluff += change
+                self.flop_bluff = min(self.flop_bluff,0.5)
             elif my_delta < 0:
-                self.flop_bluff *= change
+                self.flop_bluff += change
                 self.flop_bluff = max(self.flop_bluff,0)
         
         if street >= 4 and self.turn_bluff:
             if my_delta > 0:
-                self.turn_bluff *= change
-                self.turn_bluff = min(self.turn_bluff,1)
+                self.turn_bluff += change
+                self.turn_bluff = min(self.turn_bluff,0.5)
             elif my_delta < 0:
-                self.turn_bluff *= change
+                self.turn_bluff += change
                 self.turn_bluff = max(self.turn_bluff,0)
         
         if street >= 5 and self.river_bluff:
             if my_delta > 0:
-                self.river_bluff *= change
-                self.river_bluff = min(self.river_bluff,1)
+                self.river_bluff += change
+                self.river_bluff = min(self.river_bluff,0.5)
             elif my_delta < 0:
-                self.river_bluff *= change
+                self.river_bluff += change
                 self.river_bluff = max(self.river_bluff,0)
 
                 
@@ -579,7 +579,7 @@ class Player(Bot):
                 my_action = passive_action
         else: # continue cost is 0
             if self.big_blind:
-                if scared_strength > lead_cutoff: 
+                if scared_strength > lead_cutoff and random.random() < scared_strength: 
                     my_action = aggro_action
                     self.num_raises += 1
                 elif scared_strength < 0.15 and random.random() < bluff_freq:
@@ -594,7 +594,7 @@ class Player(Bot):
                 else:
                     my_action = flat_action
             else:
-                if scared_strength > cbet_cutoff: 
+                if scared_strength > cbet_cutoff and random.random() < scared_strength: 
                     my_action = aggro_action
                     self.num_raises += 1
                 elif scared_strength < 0.15 and random.random() < bluff_freq:
