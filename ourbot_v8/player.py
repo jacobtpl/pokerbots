@@ -109,27 +109,28 @@ class Player(Bot):
         # PREFLOP
         self.open_cutoff = 80
         self.open_defend = 60
-        self.open_reraise = 25
-        self.open_redefend = 20
+        self.open_reraise = 20
+        self.open_redefend = 15
         
-        self.bb_limpraise = 90
-        self.bb_defend = 60
-        self.bb_reraise = 30
-        self.bb_redefend = 20
+        self.bb_limpraise = 60
+        self.bb_defend = 75
+        self.bb_reraise = 25
+        self.bb_redefend = 18.75
 
-        self.preflop_allin = 10
+        self.preflop_allin = 6
 
         self.guaranteed_win = False
         self.max_loss = 200
 
-        self.preflop_multiplier = 1.0
+        # self.preflop_multiplier = 1.0
         self.flop_multiplier = 1.0
         self.turn_multiplier = 1.0
         self.river_multiplier = 1.0
 
-        self.flop_bluff = 0.1
-        self.turn_bluff = 0.2
+        self.flop_bluff = 0.3
+        self.turn_bluff = 0.3
         self.river_bluff = 0.3
+        self.bluff_raise = 0.3
 
         self.sum_bet_size = 0
         self.cnt_bet_size = 0
@@ -176,22 +177,16 @@ class Player(Bot):
 
             our_hand_value = eval7.evaluate(our_hand)
             opp_hand_value = eval7.evaluate(opp_hand)
-
-            # if recalculate and len(board) > 3:
-            #     weight = self.calc_strength(opp_hole, 50, board[:-1], False)
-            # else:
-            #     weight = get_preflop_equity(opp_hole)
             
             weight = get_preflop_equity(opp_hole)
 
-            if our_hand_value > opp_hand_value:
+            if our_hand_value >= opp_hand_value:
                 score += weight
             else: 
                 score += 0
                 
             total_weight += weight    
 
-        # hand_strength = score/(2*iters) # win probability 
         hand_strength = score/total_weight
 
         return hand_strength
@@ -244,6 +239,7 @@ class Player(Bot):
         self.flop_bluff = False
         self.turn_bluff = False
         self.river_bluff = False
+        self.raise_bluff = False
 
 
     def handle_round_over(self, game_state, terminal_state, active):
@@ -264,9 +260,10 @@ class Player(Bot):
         my_cards = previous_state.hands[active]  # your cards
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
 
-        change = (my_delta/10000)
+        change = (my_delta/2000)
+        bluff_change = (my_delta/1000)
 
-        if street == 5 and len(opp_cards) > 0 and self.river_call:
+        if street == 5 and self.river_call:
             if my_delta > 0:
                 self.river_multiplier += change
                 self.river_multiplier = min(self.river_multiplier,2)
@@ -274,7 +271,7 @@ class Player(Bot):
                 self.river_multiplier += change
                 self.river_multiplier = max(self.river_multiplier,0.5)
 
-        if street > 4 and self.turn_call:
+        if street >= 4 and self.turn_call:
             if my_delta > 0:
                 self.turn_multiplier += change
                 self.turn_multiplier = min(self.turn_multiplier,2)
@@ -282,7 +279,7 @@ class Player(Bot):
                 self.turn_multiplier += change
                 self.turn_multiplier = max(self.turn_multiplier,0.5)
         
-        if street > 3 and self.flop_call:
+        if street >= 3 and self.flop_call:
             if my_delta > 0:
                 self.flop_multiplier += change
                 self.flop_multiplier = min(self.flop_multiplier,2)
@@ -290,38 +287,37 @@ class Player(Bot):
                 self.flop_multiplier += change
                 self.flop_multiplier = max(self.flop_multiplier,0.5)
         
-        if street > 0:
-            if my_delta > 0:
-                self.preflop_multiplier += change
-                self.preflop_multiplier = min(self.preflop_multiplier,2)
-                
-            elif my_delta < 0:
-                self.preflop_multiplier += change
-                self.preflop_multipleir = max(self.preflop_multiplier,0.5)
-        
         if street >= 3 and self.flop_bluff:
             if my_delta > 0:
-                self.flop_bluff += change
-                self.flop_bluff = min(self.flop_bluff,0.5)
+                self.flop_bluff += bluff_change
+                self.flop_bluff = min(self.flop_bluff,1)
             elif my_delta < 0:
-                self.flop_bluff += change
+                self.flop_bluff += bluff_change
                 self.flop_bluff = max(self.flop_bluff,0)
         
         if street >= 4 and self.turn_bluff:
             if my_delta > 0:
-                self.turn_bluff += change
-                self.turn_bluff = min(self.turn_bluff,0.5)
+                self.turn_bluff += bluff_change
+                self.turn_bluff = min(self.turn_bluff,1)
             elif my_delta < 0:
-                self.turn_bluff += change
+                self.turn_bluff += bluff_change
                 self.turn_bluff = max(self.turn_bluff,0)
         
         if street >= 5 and self.river_bluff:
             if my_delta > 0:
-                self.river_bluff += change
-                self.river_bluff = min(self.river_bluff,0.5)
+                self.river_bluff += bluff_change
+                self.river_bluff = min(self.river_bluff,1)
             elif my_delta < 0:
-                self.river_bluff += change
+                self.river_bluff += bluff_change
                 self.river_bluff = max(self.river_bluff,0)
+
+        if self.raise_bluff:
+            if my_delta > 0:
+                self.bluff_raise += bluff_change
+                self.bluff_raise = min(self.bluff_raise,1)
+            elif my_delta < 0:
+                self.bluff_raise += bluff_change
+                self.bluff_raise = max(self.bluff_raise,0)
 
                 
     
@@ -396,7 +392,7 @@ class Player(Bot):
 
         # raise logic 
         if street < 3: #preflop 3x
-            raise_amount = int(my_pip + continue_cost + (pot_total + continue_cost))
+            raise_amount = int(my_pip + continue_cost + 2*(pot_total + continue_cost))
         else: #postflop half pot
             raise_amount = int(my_pip + continue_cost + ratio*(pot_total + continue_cost))
 
@@ -445,7 +441,6 @@ class Player(Bot):
         # PREFLOP casework
         rev_percentile = 100 - get_preflop_percentile(hole)
         rev_percentile = max(rev_percentile,0)
-        rev_percentile /= self.preflop_multiplier
         # if SB, open
         if street < 3 and not self.big_blind and continue_cost == 1:
             if rev_percentile < self.open_cutoff:
@@ -455,7 +450,7 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
         # if SB, defend against 3-bet
-        if street < 3 and not self.big_blind and opp_contribution <= 30:
+        if street < 3 and not self.big_blind and opp_contribution <= 50:
             if rev_percentile < self.open_reraise:
                 my_action = aggro_action
                 return my_action
@@ -485,7 +480,7 @@ class Player(Bot):
                 my_action = flat_action
                 return my_action
         # if BB, defend against an open
-        if street < 3 and self.big_blind and continue_cost < 10:
+        if street < 3 and self.big_blind and continue_cost <= 20:
             if rev_percentile < self.bb_reraise:
                 my_action = aggro_action
                 return my_action
@@ -496,7 +491,7 @@ class Player(Bot):
                 my_action = passive_action
                 return my_action
         # if BB, all-in against a 4bet
-        if street < 3 and self.big_blind and continue_cost >= 10:
+        if street < 3 and self.big_blind:
             if rev_percentile < self.preflop_allin:
                 my_action = jam_action
                 return my_action
@@ -513,23 +508,26 @@ class Player(Bot):
             lead_cutoff = 0.5
             cbet_cutoff = 0.3
             bluff_freq = self.flop_bluff
+            bluff_raise_freq = self.bluff_raise
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
             lead_cutoff = 0.6
             cbet_cutoff = 0.4
             bluff_freq = self.turn_bluff
+            bluff_raise_freq = self.bluff_raise
         else:
-            out_of_range = 0.2
+            out_of_range = 0.20
             reraise_cutoff = 0.85
             lead_cutoff = 0.7
             cbet_cutoff = 0.5
             bluff_freq = self.river_bluff
+            bluff_raise_freq = self.bluff_raise
 
 
 
         if continue_cost > 0:
-            self.num_raises += 2 * min(0.8, continue_cost/my_contribution) / 0.8
+            self.num_raises += min(2, continue_cost/my_contribution)
         # if continue_cost > 0:
         #     self.sum_bet_size += continue_cost/my_contribution
         #     self.cnt_bet_size += 1
@@ -574,7 +572,10 @@ class Player(Bot):
                     self.num_raises += 1
                 else: 
                     my_action = flat_action
-            
+            elif random.random() < bluff_raise_freq:
+                my_action = aggro_action
+                self.raise_bluff = True
+                self.num_raises += 1
             else: #negative EV
                 my_action = passive_action
         else: # continue cost is 0
