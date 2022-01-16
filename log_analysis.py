@@ -120,8 +120,14 @@ def avg(l):
 
 class Round:
     def __init__(self, round):
+        self.text = round
+        self.round_num = int(round[0].split('#')[1].split(',')[0])
+
         self.small_blind = round[1][0]
         self.big_blind = round[2][0]
+
+        small_blind_score = int(round[0].split('(')[1].split(')')[0])
+        
         self.flop_idx = None
         self.turn_idx = None
         self.river_idx = None
@@ -164,10 +170,6 @@ A open
 B limp
 B open
 """
-limp_hands = []
-open_hands = []
-fold_hands = []
-win_hands = []
 
 
 def get_raises(round):
@@ -215,29 +217,35 @@ b3_we_call = [get_preflop_equity(x[0]) > get_preflop_equity(x[1]) for x in b3 if
 print(f'3-Bets we fold: {avg(b3_we_fold)} (x {len(b3_we_fold)})')
 print(f'3-Bets we call: {avg(b3_we_call)} (x {len(b3_we_call)})')
 
-for r in rounds:
-    if r.small_blind == 'A':
-        if r.preflop_bets[2][1] == r.preflop_bets[1][1]:
-            # limp
-            limp_hands.append(r.preflopA)
-        elif r.preflop_bets[2][1] > r.preflop_bets[1][1]:
-            # open
-            open_hands.append(r.preflopA)
-        else:
-            assert r.preflop_bets[2][1] == 0
-            fold_hands.append(r.preflopA)
-    else:
-        continue
-        if r.preflop_bets[3][1] == 0:
-            # fold to our open
-            fold_hands.append(r.preflopA)
-        elif r.preflop_bets[3][1] == r.preflop_bets[3][0]:
-            pass
+def analyse_preflop(player):
+    limp_hands = []
+    open_hands = []
+    fold_hands = []
+    win_hands = []
+
+    for r in rounds:
+        if r.small_blind == player:
+            hand = r.preflopA if player == 'A' else r.preflopB
+            if r.preflop_bets[2][1] == r.preflop_bets[1][1]:
+                # limp
+                limp_hands.append(hand)
+            elif r.preflop_bets[2][1] > r.preflop_bets[1][1]:
+                # open
+                open_hands.append(hand)
+            else:
+                assert r.preflop_bets[2][1] == 0
+                fold_hands.append(hand)
+                if get_preflop_equity(hand) > 70:
+                    print(r.text)
+    
+    return limp_hands, open_hands, fold_hands
+    
 
 
 
+limp_hands, open_hands, fold_hands = analyse_preflop('B')
 
-
+print([f for f in fold_hands if get_preflop_equity(f) > 70])
 
 limp_strength = [get_preflop_percentile(hand) for hand in limp_hands]
 open_strength = [get_preflop_percentile(hand) for hand in open_hands]
