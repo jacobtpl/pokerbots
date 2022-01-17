@@ -200,6 +200,9 @@ class Player(Bot):
         load_preflop_equity()
 
     def get_postflop_weight(self, hand):
+        if self.tracker.valid_counts[1] < 100:
+            return get_preflop_equity(hand)/100
+
         top_range = self.tracker.get_range(1, self.final_preflop_bet)
         percentile_cutoff = 100 * (1 - top_range)
 
