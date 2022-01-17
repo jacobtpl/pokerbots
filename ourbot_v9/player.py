@@ -497,19 +497,19 @@ class Player(Bot):
                 return my_action
 
         if street == 3:
-            out_of_range = 0.1
+            out_of_range = 0.05
             reraise_cutoff = 0.75
             lead_cutoff = 0.5
-            cbet_cutoff = 0.3
+            cbet_cutoff = 0.4
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
-            lead_cutoff = 0.6
-            cbet_cutoff = 0.4
+            lead_cutoff = 0.55
+            cbet_cutoff = 0.45
         else:
-            out_of_range = 0.20
+            out_of_range = 0.25
             reraise_cutoff = 0.85
-            lead_cutoff = 0.7
+            lead_cutoff = 0.6
             cbet_cutoff = 0.5
 
 
