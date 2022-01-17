@@ -123,12 +123,10 @@ class Player(Bot):
         self.max_loss = 200
 
         # self.preflop_multiplier = 1.0
-        self.flop_multiplier = 1.0
-        self.turn_multiplier = 1.0
-        self.river_multiplier = 1.0
+        self.multiplier = 1.0
 
-        self.lead_bluff = 0.15
-        self.cbet_bluff = 0.45
+        self.lead_bluff = 0.2
+        self.cbet_bluff = 0.5
         self.bluff_raise = 0.3
 
         self.sum_bet_size = 0
@@ -259,31 +257,15 @@ class Player(Bot):
         opp_cards = previous_state.hands[1-active]  # opponent's cards or [] if not revealed
 
         change = (my_delta/2000)
-        bluff_change = (my_delta/1000)
+        bluff_change = (my_delta/500)
 
-        if street == 5 and self.river_call:
+        if street == 5 and len(opp_cards) > 0:
             if my_delta > 0:
-                self.river_multiplier += change
-                self.river_multiplier = min(self.river_multiplier,2)
+                self.multiplier += change
+                self.multiplier = min(self.multiplier,2)
             elif my_delta < 0:
-                self.river_multiplier += change
-                self.river_multiplier = max(self.river_multiplier,0.5)
-
-        if street >= 4 and self.turn_call:
-            if my_delta > 0:
-                self.turn_multiplier += change
-                self.turn_multiplier = min(self.turn_multiplier,2)
-            elif my_delta < 0:
-                self.turn_multiplier += change
-                self.turn_multiplier = max(self.turn_multiplier,0.5)
-        
-        if street >= 3 and self.flop_call:
-            if my_delta > 0:
-                self.flop_multiplier += change
-                self.flop_multiplier = min(self.flop_multiplier,2)
-            elif my_delta < 0:
-                self.flop_multiplier += change
-                self.flop_multiplier = max(self.flop_multiplier,0.5)
+                self.multiplier += change
+                self.multiplier = max(self.multiplier,0.4)
         
         if self.lead_bluffed:
             if my_delta > 0:
@@ -533,14 +515,8 @@ class Player(Bot):
 
         scared_strength = max(0.1,scared_strength)
 
-        multiplier = 1.0
+        multiplier = self.multiplier
 
-        if street == 3:
-            multiplier = self.flop_multiplier
-        elif street == 4:
-            multiplier = self.turn_multiplier
-        elif street == 5:
-            multiplier = self.river_multiplier
 
         if continue_cost > 0:
             pot_odds = continue_cost/(pot_total + continue_cost)
