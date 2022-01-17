@@ -112,10 +112,10 @@ class Player(Bot):
         self.open_reraise = 20
         self.open_redefend = 15
         
-        self.bb_limpraise = 60
-        self.bb_defend = 75
-        self.bb_reraise = 25
-        self.bb_redefend = 18.75
+        self.bb_limpraise = 50
+        self.bb_defend = 50
+        self.bb_reraise = 20
+        self.bb_redefend = 15
 
         self.preflop_allin = 6
 
@@ -400,6 +400,9 @@ class Player(Bot):
         raise_amount = max([min_raise, raise_amount])
         raise_amount = min([max_raise, raise_amount])
 
+        if opp_contribution > 100:
+            self.will_bluff = False
+
         if RaiseAction in legal_actions:
             jam_action = RaiseAction(max_raise)
         elif CallAction in legal_actions:
@@ -509,18 +512,18 @@ class Player(Bot):
         if street == 3:
             out_of_range = 0.05
             reraise_cutoff = 0.75
-            lead_cutoff = 0.5
-            cbet_cutoff = 0.4
+            lead_cutoff = 0.4
+            cbet_cutoff = 0.25
         elif street == 4:
             out_of_range = 0.15
             reraise_cutoff = 0.8
-            lead_cutoff = 0.55
-            cbet_cutoff = 0.45
+            lead_cutoff = 0.45
+            cbet_cutoff = 0.3
         else:
             out_of_range = 0.25
             reraise_cutoff = 0.85
-            lead_cutoff = 0.6
-            cbet_cutoff = 0.5
+            lead_cutoff = 0.5
+            cbet_cutoff = 0.35
 
 
 
