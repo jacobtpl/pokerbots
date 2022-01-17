@@ -127,8 +127,8 @@ class Player(Bot):
         self.turn_multiplier = 1.0
         self.river_multiplier = 1.0
 
-        self.lead_bluff = 0.15
-        self.cbet_bluff = 0.45
+        self.lead_bluff = 0.25
+        self.cbet_bluff = 0.5
         self.bluff_raise = 0.3
 
         self.sum_bet_size = 0
@@ -291,7 +291,7 @@ class Player(Bot):
                 self.lead_bluff = min(self.lead_bluff,1)
             elif my_delta < 0:
                 self.lead_bluff += bluff_change
-                self.lead_bluff = max(self.lead_bluff,0.02)
+                self.lead_bluff = max(self.lead_bluff,0)
         
         if self.cbet_bluffed:
             if my_delta > 0:
@@ -299,7 +299,7 @@ class Player(Bot):
                 self.cbet_bluff = min(self.cbet_bluff,1)
             elif my_delta < 0:
                 self.cbet_bluff += bluff_change
-                self.cbet_bluff = max(self.cbet_bluff,0.02)
+                self.cbet_bluff = max(self.cbet_bluff,0)
         
         if self.raise_bluffed:
             if my_delta > 0:
@@ -307,7 +307,7 @@ class Player(Bot):
                 self.bluff_raise = min(self.bluff_raise,1)
             elif my_delta < 0:
                 self.bluff_raise += bluff_change
-                self.bluff_raise = max(self.bluff_raise,0.02)
+                self.bluff_raise = max(self.bluff_raise,0)
 
                 
     
@@ -498,12 +498,12 @@ class Player(Bot):
             lead_cutoff = 0.5
             cbet_cutoff = 0.3
         elif street == 4:
-            out_of_range = 0.1
+            out_of_range = 0.15
             reraise_cutoff = 0.8
             lead_cutoff = 0.6
             cbet_cutoff = 0.4
         else:
-            out_of_range = 0.1
+            out_of_range = 0.20
             reraise_cutoff = 0.85
             lead_cutoff = 0.7
             cbet_cutoff = 0.5
