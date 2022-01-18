@@ -684,7 +684,7 @@ class Player(Bot):
                     self.num_raises += 1.4
                 else: 
                     my_action = flat_action
-            elif random.random() < self.bluff_raise and self.will_bluff:
+            elif random.random() < self.bluff_raise and self.will_bluff and my_pip == 0:
                 my_action = aggro_action
                 self.did_raise = True
                 self.num_raises += 1.4
