@@ -1,0 +1,44 @@
+PREFLOP PLAY:
+If small raise (<= 2x), never fold.
+
+Raise amount = my_pip + continue_cost + 2*(pot_total + continue_cost) = 5 * opp_pip
+
+Small blind:
+    Case 1: First to act
+        If our hand is in top X%, we open.
+        Otherwise, call to 2.
+    Case 2: Opp 3-bets (<= 50)
+        If our hand is in top X%, we reraise.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+    Case 3: Opp 5-bets (> 50)
+        If our hand is in top X%, we jam.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+
+Big blind:
+    Case 1: Opp limps to us
+        If our hand is in top X%, we raise.
+        Otherwise, check.
+    Case 2: Opp opens (<= 20)
+        If our hand is in top X%, we reraise.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+    Case 3: Opp 4-bets (> 20)
+        If our hand is in top X%, we jam.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+
+POSTFLOP PLAY:
+
+My bet: A
+Opp bet: B
+
+Raise amount = B + ratio * (oldpot + B + B-A)
+
+old pot: 20
+opp bet: 20
+cur pot: 40
+
+raise: 20 + 0.5 * (40 + 20) = 50
+pot: 90
