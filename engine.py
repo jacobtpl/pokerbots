@@ -169,6 +169,8 @@ class Player():
         self.path = path
         self.game_clock = STARTING_GAME_CLOCK
         self.bankroll = 0
+        self.sb_bankroll = 0
+        self.bb_bankroll = 0
         self.commands = None
         self.bot_subprocess = None
         self.socketfile = None
@@ -404,6 +406,9 @@ class Game():
         pips = [SMALL_BLIND, BIG_BLIND]
         stacks = [STARTING_STACK - SMALL_BLIND, STARTING_STACK - BIG_BLIND]
         round_state = RoundState(0, 0, pips, stacks, hands, deck, None)
+
+        small_blind = round_state.button % 2
+
         while not isinstance(round_state, TerminalState):
             self.log_round_state(players, round_state)
             active = round_state.button % 2
@@ -413,8 +418,12 @@ class Game():
             self.log_action(player.name, action, bet_override)
             round_state = round_state.proceed(action)
         self.log_terminal_state(players, round_state)
-        for player, player_message, delta in zip(players, self.player_messages, round_state.deltas):
+        for player, player_message, delta, idx in zip(players, self.player_messages, round_state.deltas, range(2)):
             player.query(round_state, player_message, self.log)
+            if idx == small_blind:
+                player.sb_bankroll += delta
+            else:
+                player.bb_bankroll += delta
             player.bankroll += delta
 
     def run(self):
@@ -441,6 +450,10 @@ class Game():
             players = players[::-1]
         self.log.append('')
         self.log.append('Final' + STATUS(players))
+        print(f'{players[0].name} (SB): {players[0].sb_bankroll}')
+        print(f'{players[0].name} (BB): {players[0].bb_bankroll}')
+        print(f'{players[1].name} (SB): {players[1].sb_bankroll}')
+        print(f'{players[1].name} (BB): {players[1].bb_bankroll}')
         for player in players:
             player.stop()
         name = GAME_LOG_FILENAME + '.txt'
