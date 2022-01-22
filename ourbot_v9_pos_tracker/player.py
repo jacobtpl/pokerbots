@@ -173,7 +173,7 @@ class Player(Bot):
         self.open_reraise = 20
         self.open_redefend = 15
         
-        self.bb_limpraise = 50
+        self.bb_limpraise = 100
         self.bb_defend = 50
         self.bb_reraise = 20
         self.bb_redefend = 15
