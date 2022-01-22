@@ -559,9 +559,16 @@ class Player(Bot):
                 self.last_raised = True
                 return my_action
             else:
-                my_action = passive_action
+                my_action = flat_action
                 return my_action
         # if SB, defend against 3-bet
+        if street < 3 and not self.big_blind and my_contribution == 2 and continue_cost <= 10:
+            if rev_percentile < self.open_cutoff:
+                my_action = flat_action
+                return my_action
+            else:
+                my_action = passive_action
+                return my_action
         if street < 3 and not self.big_blind and opp_contribution <= 50:
             if rev_percentile < self.open_reraise:
                 my_action = aggro_action
