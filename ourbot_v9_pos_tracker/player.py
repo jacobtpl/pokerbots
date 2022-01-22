@@ -169,14 +169,14 @@ class Player(Bot):
 
         # PREFLOP
         self.open_cutoff = 80
-        self.open_defend = 60
-        self.open_reraise = 20
-        self.open_redefend = 15
+        self.open_defend = 45
+        self.open_reraise = 10
+        self.open_redefend = 10
         
         self.bb_limpraise = 65
-        self.bb_defend = 65
-        self.bb_reraise = 50
-        self.bb_redefend = 35
+        self.bb_defend = 75
+        self.bb_reraise = 25
+        self.bb_redefend = 17
 
         self.preflop_allin = 6
 
