@@ -137,3 +137,8 @@ class PreflopTracker:
     
     def get_total_range(self, player, amount):
         return (self.stats[player][0][self.group(amount)] + self.stats[player][0][self.group(amount)]) / (self.valid_counts[player][0] + self.valid_counts[player][1])
+
+    def get_stat(self, player, blind):
+        if self.valid_counts[player][blind] == 0:
+            return None
+        return {x: self.stats[player][blind][x] / self.valid_counts[player][blind] for x in self.stats[player][blind]}

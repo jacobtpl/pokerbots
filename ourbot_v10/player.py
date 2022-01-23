@@ -270,6 +270,12 @@ class Player(Bot):
                 self.bluff_raise -= bluff_change
                 self.bluff_raise = max(self.bluff_raise,0)
 
+        from pprint import pprint
+        print(f'Us in SB: {self.tracker.get_stat(0, 0)}')
+        print(f'Us in BB: {self.tracker.get_stat(0, 1)}')
+        print(f'Op in SB: {self.tracker.get_stat(1, 0)}')
+        print(f'Op in BB: {self.tracker.get_stat(1, 1)}')
+        print()
     
     def get_board_texture(self,board):
         suits = [str(card)[1] for card in board]
