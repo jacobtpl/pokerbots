@@ -27,17 +27,17 @@ class Player(Bot):
         # PERCENTILES are rounded up, i.e. best hand is 100% and worst hand is > 0%
 
         # PREFLOP CONSTANTS
-        self.open_cutoff = 80
-        self.open_defend = 60
-        self.open_reraise = 20
-        self.open_redefend = 15
+        self.open_cutoff = 81
+        self.open_defend = 50
+        self.open_reraise = 10
+        self.open_redefend = 8
         
-        self.bb_limpraise = 50
-        self.bb_defend = 50
-        self.bb_reraise = 20
-        self.bb_redefend = 15
+        self.bb_limpraise = 65
+        self.bb_defend = 75
+        self.bb_reraise = 21
+        self.bb_redefend = 18
 
-        self.preflop_allin = 6
+        self.preflop_allin = 5
 
         self.guaranteed_win = False
         self.max_loss = 200
@@ -235,13 +235,8 @@ class Player(Bot):
                 # opp folded
                 self.tracker.fold(1)
 
-        change = (my_delta/1000)
-        if change < 0:
-            change = -change
-
-        bluff_change = (my_delta/2000)
-        if bluff_change < 0:
-            bluff_change = -bluff_change
+        change = 0.05
+        bluff_change = 0.02
 
         if street == 5 and self.river_call:
             if my_delta > 0:
@@ -249,7 +244,7 @@ class Player(Bot):
                 self.river_multiplier = min(self.river_multiplier,2)
             elif my_delta < 0:
                 self.river_multiplier -= change
-                self.river_multiplier = max(self.river_multiplier,0.5)
+                self.river_multiplier = max(self.river_multiplier,0.33)
 
         if street >= 4 and self.turn_call:
             if my_delta > 0:
@@ -257,7 +252,7 @@ class Player(Bot):
                 self.turn_multiplier = min(self.turn_multiplier,2)
             elif my_delta < 0:
                 self.turn_multiplier -= change
-                self.turn_multiplier = max(self.turn_multiplier,0.5)
+                self.turn_multiplier = max(self.turn_multiplier,0.33)
         
         if street >= 3 and self.flop_call:
             if my_delta > 0:
@@ -265,7 +260,7 @@ class Player(Bot):
                 self.flop_multiplier = min(self.flop_multiplier,2)
             elif my_delta < 0:
                 self.flop_multiplier -= change
-                self.flop_multiplier = max(self.flop_multiplier,0.5)
+                self.flop_multiplier = max(self.flop_multiplier,0.33)
         
         if self.did_lead:
             if my_delta > 0 and len(opp_cards) == 0:
@@ -385,7 +380,14 @@ class Player(Bot):
 
         # raise logic 
         if street < 3: #preflop 3x
-            raise_amount = int(my_pip + continue_cost + 2*(pot_total + continue_cost))
+            if opp_contribution <= 2:
+                raise_amount = 4 * opp_contribution
+            elif opp_contribution <= 12:
+                raise_amount = 4 * opp_contribution
+            elif opp_contribution <= 40:
+                raise_amount = int(2.5 * opp_contribution)
+            else:
+                raise_amount = 200
         else: #postflop half pot
             raise_amount = int(my_pip + continue_cost + ratio*(pot_total + continue_cost))
 
