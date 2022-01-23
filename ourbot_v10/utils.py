@@ -27,7 +27,7 @@ def load_preflop_equity():
             return 4
         return 12
 
-    stored = open('preflop_equity.txt', 'r').read().strip().split()
+    stored = open('preflop_equity_exact.txt', 'r').read().strip().split()
     for i in range(0, len(stored), 2):
         hand_class = stored[i]
         equity = float(stored[i+1])
@@ -105,6 +105,15 @@ class PreflopTracker:
         # if amount < 150:
         #     return '4-bet'
         return 'jam'
+    
+    def next_level(self, group):
+        if group == 'limp':
+            return 'open'
+        if group == 'open':
+            return '3-bet'
+        if group == '3-bet':
+            return 'jam'
+        return None
 
     def add_bet(self, player, amount):
         # assert player != self.cur_round[-1][0]
@@ -134,6 +143,19 @@ class PreflopTracker:
     
     def get_blind_range(self, player, blind, amount):
         return self.stats[player][blind][self.group(amount)] / self.valid_counts[player][blind]
+
+    def get_percentile_bounds(self, player, blind, amount):
+        group = self.group(amount)
+        next = self.next_level(group)
+        low_bound = 100 * (1 - self.get_blind_range(player, blind, amount))
+        if next is None:
+            high_bound = 100
+        else:
+            next_range = self.stats[player][blind][next] / self.valid_counts[player][blind]
+            high_bound = 100 * (1 - next_range)
+        return low_bound, high_bound
+        
+        
     
     def get_total_range(self, player, amount):
         return (self.stats[player][0][self.group(amount)] + self.stats[player][0][self.group(amount)]) / (self.valid_counts[player][0] + self.valid_counts[player][1])

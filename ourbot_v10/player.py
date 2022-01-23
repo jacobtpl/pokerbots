@@ -42,6 +42,13 @@ class Player(Bot):
         self.guaranteed_win = False
         self.max_loss = 200
 
+        # TRACKER CONSTANTS
+        self.round_start_using_tracker = 100
+        self.low_spread = 20 # percent
+        self.low_min_weight = 0.1
+        self.high_spread = 10 # percent
+        self.high_min_weight = 0.5
+
         # MULTIPLIERS
         # self.preflop_multiplier = 1.0
         self.flop_multiplier = 1.0
@@ -59,25 +66,30 @@ class Player(Bot):
         load_preflop_equity()
 
     def get_postflop_weight(self, hand):
-        if self.round_num < 200:
+        if self.round_num < self.round_start_using_tracker:
             return get_preflop_equity(hand)/100
 
         if self.big_blind:
-            top_range = self.tracker.get_blind_range(1, 0, self.final_preflop_bet)
+            low_pct, high_pct = self.tracker.get_percentile_bounds(1, 0, self.final_preflop_bet)
         else:
-            top_range = self.tracker.get_blind_range(1, 1, self.final_preflop_bet)
-        percentile_cutoff = 100 * (1 - top_range)
-
-        SPREAD = 20
-
-        pct = get_preflop_percentile(hand)
-        if pct >= percentile_cutoff:
-            return 1.0
-        low_cutoff = percentile_cutoff - SPREAD
-        if pct < low_cutoff:
-            return 0.1
+            low_pct, high_pct = self.tracker.get_percentile_bounds(1, 1, self.final_preflop_bet)
         
-        return 0.1 + 0.9 * (pct - low_cutoff) / SPREAD
+        pct = get_preflop_percentile(hand)
+
+        if pct < low_pct:
+            low_cutoff = low_pct - self.low_spread
+            if pct < low_cutoff:
+                return self.low_min_weight
+            else:
+                return self.low_min_weight + (1 - self.low_min_weight) * (pct - low_cutoff) / self.low_spread
+        elif pct > high_pct:
+            high_cutoff = high_pct + self.high_spread
+            if pct > high_cutoff:
+                return self.high_min_weight
+            else:
+                return self.high_min_weight + (1 - self.high_min_weight) * (high_cutoff - pct) / self.high_spread
+    
+        return 1.0
 
     def calc_strength(self, hole, iters, board):
         ''' 
