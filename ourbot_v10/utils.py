@@ -72,24 +72,27 @@ def get_preflop_percentile(hand):
 class PreflopTracker:
     NAMES = ['limp', 'open', '3-bet', '4-bet', 'jam', 'fold']
     def __init__(self):
-        self.stats = [{}, {}]
+        self.stats = [[{}, {}], [{}, {}]]
+        # self.stats[player][small blind(0) / big blind(1)]
         for p in range(2):
-            for n in self.NAMES:
-                self.stats[p][n] = 0
+            for blind in range(2):
+                for n in self.NAMES:
+                    self.stats[p][blind][n] = 0
         self.num_rounds = 0
-        self.valid_counts = [0, 0]
+        self.valid_counts = [[0, 0], [0, 0]]
         self.cur_round = []
     
-    def update(self, player, val):
-        if val in self.stats[player]:
-            self.stats[player][val] += 1
+    def update(self, player, blind, val):
+        if val in self.stats[player][blind]:
+            self.stats[player][blind][val] += 1
         else:
-            self.stats[player][val] = 1
+            self.stats[player][blind][val] = 1
 
     def new_round(self, small_blind_player):
         self.cur_round = [(small_blind_player, 1), (1-small_blind_player, 2)]
+        self.small_blind = small_blind_player
         self.num_rounds += 1
-        self.add_counts = [0, 0]
+        self.add_counts = [[0, 0], [0, 0]]
 
     def group(self, amount):
         assert amount >= 2
@@ -105,27 +108,32 @@ class PreflopTracker:
 
     def add_bet(self, player, amount):
         # assert player != self.cur_round[-1][0]
+        blind = 0 if player == self.small_blind else 1
 
-        if self.add_counts[player] == 0:
-            self.add_counts[player] = 1
-            self.valid_counts[player] += 1
+        if self.add_counts[player][blind] == 0:
+            self.add_counts[player][blind] = 1
+            self.valid_counts[player][blind] += 1
 
         if amount == self.cur_round[-1][1]:
             if amount == 2:
-                self.update(player, self.group(amount))
+                self.update(player, blind, self.group(amount))
             else:
-                self.update(player, self.group(amount))
+                self.update(player, blind, self.group(amount))
         else:
             # raise
-            self.update(player, self.group(amount))
+            self.update(player, blind, self.group(amount))
         self.cur_round.append((player, amount))
         # self.update(player, amount)
 
     def fold(self, player):
-        if self.add_counts[player] == 0:
-            self.add_counts[player] = 1
-            self.valid_counts[player] += 1
-        self.update(player, 'fold')
+        blind = 0 if player == self.small_blind else 1
+        if self.add_counts[player][blind] == 0:
+            self.add_counts[player][blind] = 1
+            self.valid_counts[player][blind] += 1
+        self.update(player, blind, 'fold')
     
-    def get_range(self, player, amount):
-        return self.stats[player][self.group(amount)] / self.valid_counts[player]
+    def get_blind_range(self, player, blind, amount):
+        return self.stats[player][blind][self.group(amount)] / self.valid_counts[player][blind]
+    
+    def get_total_range(self, player, amount):
+        return (self.stats[player][0][self.group(amount)] + self.stats[player][0][self.group(amount)]) / (self.valid_counts[player][0] + self.valid_counts[player][1])

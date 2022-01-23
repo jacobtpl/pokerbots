@@ -59,10 +59,13 @@ class Player(Bot):
         load_preflop_equity()
 
     def get_postflop_weight(self, hand):
-        if self.tracker.valid_counts[1] < 100:
+        if self.round_num < 200:
             return get_preflop_equity(hand)/100
 
-        top_range = self.tracker.get_range(1, self.final_preflop_bet)
+        if self.big_blind:
+            top_range = self.tracker.get_blind_range(1, 0, self.final_preflop_bet)
+        else:
+            top_range = self.tracker.get_blind_range(1, 1, self.final_preflop_bet)
         percentile_cutoff = 100 * (1 - top_range)
 
         SPREAD = 20
@@ -175,6 +178,7 @@ class Player(Bot):
         my_cards = round_state.hands[active]  # your cards
         self.big_blind = bool(active)  # True if you are the big blind
         self.num_raises = 0
+        self.round_num = round_num
 
         # we are 0, they are 1
         if self.big_blind:

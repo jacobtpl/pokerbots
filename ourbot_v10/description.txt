@@ -30,15 +30,33 @@ Big blind:
         Otherwise, fold.
 
 POSTFLOP PLAY:
+strength = value from 0 to 1
+scared_strength: scale down strength based on opponent raise sizes
 
-My bet: A
-Opp bet: B
+multiplier: starts at 1, unique for each street
+If we win on that street: increase multiplier (less scared)
+If we lose: decrease multiplier (more scared)
 
-Raise amount = B + ratio * (oldpot + B + B-A)
+final strength used: scared_strength * multiplier
 
-old pot: 20
-opp bet: 20
-cur pot: 40
+strength = probability of winning
 
-raise: 20 + 0.5 * (40 + 20) = 50
-pot: 90
+if opponent bets to us:
+    if strength > pot odds to call:
+        if strength > reraise cutoff:
+            We reraise
+        else:
+            We call
+    else (bad pot odds):
+        With probability X, if we were not raised (opp was first bet):
+            We raise (bluff)
+        Otherwise:
+            We fold
+if first to act:
+    if strength > X
+if opponent checks to us:
+    if we are 
+
+
+
+
