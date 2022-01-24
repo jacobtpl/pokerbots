@@ -67,7 +67,7 @@ class Player(Bot):
 
     def get_postflop_weight(self, hand):
         if self.round_num < self.round_start_using_tracker:
-            return get_preflop_equity(hand) / 100
+            return 1.0
 
         if self.big_blind:
             low_pct, high_pct = self.tracker.get_percentile_bounds(1, 0, self.final_preflop_bet)
@@ -82,12 +82,12 @@ class Player(Bot):
                 return self.low_min_weight
             else:
                 return self.low_min_weight + (1 - self.low_min_weight) * (pct - low_cutoff) / self.low_spread
-        # elif pct > high_pct:
-        #     high_cutoff = high_pct + self.high_spread
-        #     if pct > high_cutoff:
-        #         return self.high_min_weight
-        #     else:
-        #         return self.high_min_weight + (1 - self.high_min_weight) * (high_cutoff - pct) / self.high_spread
+        elif pct > high_pct:
+            high_cutoff = high_pct + self.high_spread
+            if pct > high_cutoff:
+                return self.high_min_weight
+            else:
+                return self.high_min_weight + (1 - self.high_min_weight) * (high_cutoff - pct) / self.high_spread
     
         return 1.0
 
@@ -132,7 +132,7 @@ class Player(Bot):
             our_hand_value = eval7.evaluate(our_hand)
             opp_hand_value = eval7.evaluate(opp_hand)
             
-            weight = self.get_postflop_weight(opp_hole)
+            weight = get_preflop_equity(opp_hole) * self.get_postflop_weight(opp_hole)
 
             if our_hand_value >= opp_hand_value:
                 score += weight

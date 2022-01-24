@@ -1,0 +1,62 @@
+PREFLOP PLAY:
+If small raise (<= 2x), never fold.
+
+Raise amount = my_pip + continue_cost + 2*(pot_total + continue_cost) = 5 * opp_pip
+
+Small blind:
+    Case 1: First to act
+        If our hand is in top X%, we open.
+        Otherwise, call to 2.
+    Case 2: Opp 3-bets (<= 50)
+        If our hand is in top X%, we reraise.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+    Case 3: Opp 5-bets (> 50)
+        If our hand is in top X%, we jam.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+
+Big blind:
+    Case 1: Opp limps to us
+        If our hand is in top X%, we raise.
+        Otherwise, check.
+    Case 2: Opp opens (<= 20)
+        If our hand is in top X%, we reraise.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+    Case 3: Opp 4-bets (> 20)
+        If our hand is in top X%, we jam.
+        If our hand is in top Y%, we call.
+        Otherwise, fold.
+
+POSTFLOP PLAY:
+strength = value from 0 to 1
+scared_strength: scale down strength based on opponent raise sizes
+
+multiplier: starts at 1, unique for each street
+If we win on that street: increase multiplier (less scared)
+If we lose: decrease multiplier (more scared)
+
+final strength used: scared_strength * multiplier
+
+strength = probability of winning
+
+if opponent bets to us:
+    if strength > pot odds to call:
+        if strength > reraise cutoff:
+            We reraise
+        else:
+            We call
+    else (bad pot odds):
+        With probability X, if we were not raised (opp was first bet):
+            We raise (bluff)
+        Otherwise:
+            We fold
+if first to act:
+    if strength > X
+if opponent checks to us:
+    if we are 
+
+
+
+
