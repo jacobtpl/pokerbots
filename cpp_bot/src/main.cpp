@@ -226,21 +226,29 @@ struct Bot {
 
 	// PREFLOP CONSTANTS
 
-	double open_cutoff = 81;
+	double open_cutoff = 80;
 	double open_defend = 50;
-	double open_reraise = 10;
-	double open_redefend = 8;
+	double open_reraise = 15;
+	double open_redefend = 12;
 
 	double bb_limpraise = 65;
-	double bb_defend = 75;
-	double bb_reraise = 21;
+	double bb_defend = 65;
+	double bb_reraise = 25;
 	double bb_redefend = 18;
 
-	double preflop_allin = 5;
+	double preflop_allin = 6;
 
 	bool guaranteed_win = false;
 	int max_loss = 200;
+	
+	// TRACKER CONSTANTS
+	double round_start_using_tracker = 150;
+	double low_spread = 20; // percent
+	double low_min_weight = 0.1;
+	double high_spread = 20; // percent
+	double high_min_weight = 0.5;
 
+	// MULTIPLIERS
 	double preflop_multiplier = 1.0;
 	double flop_multiplier = 1.0;
 	double turn_multiplier = 1.0;
@@ -253,11 +261,14 @@ struct Bot {
 	bool will_bluff = false;
 
 	bool last_raised = false;
+	int final_preflop_bet = 0;
+	PreflopTracker tracker;
 
 	Bot() {
 		rng = mt19937();
 		udist = uniform_real_distribution<double>(0.0, 1.0);
 		loadPreflopEquity();
+		tracker = PreflopTracker();
 	}
 
 	double randomReal() {
@@ -265,7 +276,36 @@ struct Bot {
 	}
 	
 	double getPostflopWeight(pair<int,int> hand) {
-		return 1.0;
+		if (roundNum < round_start_using_tracker) {
+			return 1.0;
+		}
+		pair<double, double> bounds;
+		if (bigBlind) {
+			bounds = tracker.get_percentile_bounds(1, 0, final_preflop_bet);
+		} else {
+			bounds = tracker.get_percentile_bounds(1, 1, final_preflop_bet);
+		}
+
+		double pct = getPreflopPercentile(hand);
+		double low_pct = bounds.first;
+		double high_pct = bounds.second;
+
+		if (pct < low_pct) {
+            double low_cutoff = low_pct - low_spread;
+            if (pct < low_cutoff) {
+                return low_min_weight;
+			} else {
+                return low_min_weight + (1.0 - low_min_weight) * (pct - low_cutoff) / low_spread;
+			}
+		} else if (pct > high_pct) {
+            double high_cutoff = high_pct + high_spread;
+            if (pct > high_cutoff) {
+                return high_min_weight;
+            } else {
+                return high_min_weight + (1.0 - high_min_weight) * (high_cutoff - pct) / high_spread;
+			}
+		}
+        return 1.0;
 	}
 
 	double calcStrength(pair<int,int> hole, int iters, vector<int> board) {
@@ -303,7 +343,7 @@ struct Bot {
 			int ourValue = eval.evaluate(ourHand);
 			int oppValue = eval.evaluate(oppHand);
 
-			double weight = getPreflopEquity(oppHole);
+			double weight = getPreflopEquity(oppHole) * getPostflopWeight(oppHole);
 
 			if (ourValue >= oppValue) {
 				score += weight;
@@ -364,6 +404,11 @@ struct Bot {
         bigBlind = (active == 1);                  // true if you are the big blind
 		num_raises = 0.0;
 
+		if (bigBlind) {
+			tracker.new_round(1);
+		} else {
+			tracker.new_round(0);
+		}
 		checkGuaranteedWin(myBankroll);
 
 		flop_call = false;
@@ -390,7 +435,7 @@ struct Bot {
     
 		if (street == 0) {
 			if (my_delta > 0) {
-				// tracker.fold(1);
+				tracker.fold(1);
 			}
 		}
 
@@ -451,6 +496,12 @@ struct Bot {
 				bluff_raise = max(bluff_raise,0.0);
 			}
 		}
+
+		cout << "Us in SB: " << tracker.get_stat(0, 0) << endl;
+		cout << "Us in BB: " << tracker.get_stat(0, 1) << endl;
+		cout << "Op in SB: " << tracker.get_stat(1, 0) << endl;
+		cout << "Op in BB: " << tracker.get_stat(1, 1) << endl;
+		cout << endl;
 	}
 
 	pair<int,int> toHand(array<string, 2UL> hand) {
@@ -496,10 +547,29 @@ struct Bot {
 
 		int potTotal = myContribution + oppContribution;        
 
+		if (street == 0) {
+            assert(oppPip >= 2);
+            if (oppPip == 2) {
+                if (myPip == 1) {
+                    // do nothing
+				} else {
+                    // opp limped
+                    tracker.add_bet(1, oppPip);
+				}
+			} else {
+                tracker.add_bet(1, oppPip);
+			}
+		} else if (street == 3 and myPip == 0) {
+            if (last_raised) {
+                tracker.add_bet(1, myContribution);
+			}
+            final_preflop_bet = myContribution;
+		}
+
+
 		const int MC_ITERS = 200;
 		pair<int,int> myHand = toHand(myCards);
 		double strength = calcStrength(myHand, MC_ITERS, board);
-
 
 		// CALCULATE RAISE SIZING
 		double ratio = 0.7; // pot bet ratio postflop
