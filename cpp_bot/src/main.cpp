@@ -151,6 +151,7 @@ struct PreflopTracker {
 	}
 
 	void add_bet(int player, int amount) {
+		cout << player << " * " << amount << endl;
 		int blind = (player == small_blind)?0:1;
 
 		if (add_counts[player][blind] == 0) {
@@ -343,7 +344,7 @@ struct Bot {
 			int ourValue = eval.evaluate(ourHand);
 			int oppValue = eval.evaluate(oppHand);
 
-			double weight = getPreflopEquity(oppHole) * getPostflopWeight(oppHole);
+			double weight = getPostflopWeight(oppHole);
 
 			if (ourValue >= oppValue) {
 				score += weight;
@@ -385,7 +386,7 @@ struct Bot {
 		}
 
 		if (mincost < bankroll) {
-			guaranteed_win = true;
+			// guaranteed_win = true;
 		}
 		max_loss = bankroll + opp_mincost;
 	}
@@ -537,7 +538,7 @@ struct Bot {
         int oppContribution = STARTING_STACK - oppStack;  // the number of chips your opponent has contributed to the pot
 
 		int minRaise = 0;
-		int maxRaise = 0;
+		int maxRaise = 200;
 
 		if (legalActions.find(Action::Type::RAISE) != legalActions.end()) {
 			auto raiseBounds = roundState->raiseBounds();  // the smallest && largest numbers of chips for a legal bet/raise
@@ -660,26 +661,46 @@ struct Bot {
 				if (continueCost == 1) {
 					if (rev_percentile < open_cutoff) {
 						last_raised = true;
+						tracker.add_bet(0, raiseAmount);
 						return aggro_action;
 					} else {
+						if (passive_action.actionType == flat_action.actionType) {
+							tracker.add_bet(0, oppPip);
+						} else {
+							tracker.fold(0);
+						}
 						return passive_action;
 					}
 				} else if (oppContribution <= 50) {
 					if (rev_percentile < open_reraise) {
 						last_raised = true;
+						tracker.add_bet(0, raiseAmount);
 						return aggro_action;
 					} else if (rev_percentile < open_defend) {
+						tracker.add_bet(0, oppPip);
 						return flat_action;
 					} else {
+						if (passive_action.actionType == flat_action.actionType) {
+							tracker.add_bet(0, oppPip);
+						} else {
+							tracker.fold(0);
+						}
 						return passive_action;
 					}
 				} else {
 					if (rev_percentile < preflop_allin) {
 						last_raised = true;
+						tracker.add_bet(0, maxRaise);
 						return jam_action;
 					} else if (rev_percentile < open_redefend) {
+						tracker.add_bet(0, oppPip);
 						return flat_action;
 					} else {
+						if (passive_action.actionType == flat_action.actionType) {
+							tracker.add_bet(0, oppPip);
+						} else {
+							tracker.fold(0);
+						}
 						return passive_action;
 					}
 				}
@@ -688,26 +709,42 @@ struct Bot {
 				if (continueCost == 0) {
 					if (rev_percentile < bb_limpraise) {
 						last_raised = true;
+						tracker.add_bet(0, raiseAmount);
 						return aggro_action;
 					} else {
+						tracker.add_bet(0, oppPip);
 						return flat_action;
 					}
 				} else if (oppContribution <= 20) {
 					if (rev_percentile < bb_reraise) {
 						last_raised = true;
+						tracker.add_bet(0, raiseAmount);
 						return aggro_action;
 					} else if (rev_percentile < bb_defend) {
+						tracker.add_bet(0, oppPip);
 						return flat_action;
 					} else {
+						if (passive_action.actionType == flat_action.actionType) {
+							tracker.add_bet(0, oppPip);
+						} else {
+							tracker.fold(0);
+						}
 						return passive_action;
 					}
 				} else {
 					if (rev_percentile < preflop_allin) {
 						last_raised = true;
+						tracker.add_bet(0, maxRaise);
 						return jam_action;
 					} else if (rev_percentile < bb_redefend) {
+						tracker.add_bet(0, oppPip);
 						return flat_action;
 					} else {
+						if (passive_action.actionType == flat_action.actionType) {
+							tracker.add_bet(0, oppPip);
+						} else {
+							tracker.fold(0);
+						}
 						return passive_action;
 					}
 				}
