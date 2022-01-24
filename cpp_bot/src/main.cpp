@@ -97,6 +97,118 @@ double getPreflopEquity(pair<int,int> hand) {
 double getPreflopPercentile(pair<int,int> hand) {
 	return PERCENTILE[hand];
 }
+
+struct PreflopTracker {
+	vector<string> NAMES = {"limp", "open", "3-bet", "jam", "fold"};
+	map<string, int> stats[2][2];
+	int num_rounds = 0;
+	int valid_counts[2][2];
+	int add_counts[2][2];
+	vector<pair<int,int> > cur_round;
+	int small_blind;
+	PreflopTracker() {
+		// init maps
+		memset(valid_counts, 0, sizeof(valid_counts));
+	}
+
+	void update(int player, int blind, string group) {
+		stats[player][blind][group] += 1;
+	}
+
+	void new_round(int small_blind_player) {
+		cur_round.clear();
+		cur_round.push_back(make_pair(small_blind_player, 1));
+		cur_round.push_back(make_pair(1-small_blind_player, 2));
+		small_blind = small_blind_player;
+		num_rounds++;
+		memset(add_counts, 0, sizeof(add_counts));
+	}
+
+	string group(int amount) {
+		assert(amount >= 2);
+		if (amount == 2) {
+			return "limp";
+		}
+		if (amount <= 12) {
+			return "open";
+		}
+		if (amount <= 60) {
+			return "3-bet";
+		}
+		return "jam";
+	}
+
+	string next_level(string group) {
+		if (group == "jam") {
+			return "";
+		}
+		for (int i=0;i<NAMES.size()-2;i++) {
+			if (NAMES[i] == group) {
+				return NAMES[i+1];
+			}
+		}
+		assert(0);
+	}
+
+	void add_bet(int player, int amount) {
+		int blind = (player == small_blind)?0:1;
+
+		if (add_counts[player][blind] == 0) {
+            add_counts[player][blind] = 1;
+            valid_counts[player][blind] += 1;
+		}
+
+        if (amount == cur_round.back().second) {
+            if (amount == 2) {
+                update(player, blind, group(amount));
+			} else {
+                update(player, blind, group(amount));
+			}
+        } else {
+            // raise
+            update(player, blind, group(amount));
+		}
+        cur_round.push_back(make_pair(player, amount));
+	}
+
+	void fold(int player) {
+		int blind = (player == small_blind)?0:1;
+		if (add_counts[player][blind] == 0) {
+            add_counts[player][blind] = 1;
+            valid_counts[player][blind] += 1;
+		}
+		update(player, blind, "fold");
+	}
+
+	double get_blind_range(int player, int blind, int amount) {
+        return (double)stats[player][blind][group(amount)] / (double)valid_counts[player][blind];
+	}
+
+	pair<double, double> get_percentile_bounds(int player, int blind, int amount) {
+        string grp = group(amount);
+        string next = next_level(grp);
+        double low_bound = 100.0 * (1.0 - get_blind_range(player, blind, amount));
+        double high_bound = 100.0;
+		if (next.size() > 0) {
+            double next_range = (double)stats[player][blind][next] / (double)valid_counts[player][blind];
+            high_bound = 100.0 * (1.0 - next_range);
+		}
+        return make_pair(low_bound, high_bound);
+	}
+
+	double get_total_range(int player, int amount) {
+        return (double)(stats[player][0][group(amount)] + stats[player][0][group(amount)]) / (double)(valid_counts[player][0] + valid_counts[player][1]);
+	}
+
+    string get_stat(int player, int blind) {
+        if (valid_counts[player][blind] == 0) return "None"; 
+		stringstream out;
+		for (auto x : NAMES) {
+			out << x << ": " << (double)stats[player][blind][x] / (double)valid_counts[player][blind] << ", ";
+		}
+		return out.str();
+	}
+};
 struct Bot {
 	mt19937 rng;
 	uniform_real_distribution<double> udist;
