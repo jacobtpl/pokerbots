@@ -57,35 +57,57 @@ struct Bot {
 	double randomReal() {
 		return udist(rng);
 	}
-	double calcStrength(pair<int,int> hole, int iters) {
+	
+	double getPostflopWeight(pair<int,int> hand) {
+		return 1.0;
+	}
+
+	double calcStrength(pair<int,int> hole, int iters, vector<int> board) {
+		if (board.size() == 0) {
+			// TODO: change to GET PREFLOP EQUITY
+			return 0;
+		}
 		vector<int> deck;
 		for (int i=0;i<52;i++) {
 			if (i == hole.first || i == hole.second) continue;
+			if (find(board.begin(), board.end(), i) != board.end()) continue;
 			deck.push_back(i);
 		}
 
 		HandEvaluator eval;
-		int score = 0;
+		double score = 0;
+		double totalWeight = 0.0;
+
 		for (int kk=0;kk<iters;kk++) {
 			shuffle(deck.begin(), deck.end(), rng);
-			// opp hole: next 2
-			// board: following 5
+			
+			int COMM = 5 - board.size();
+			pair<int,int> oppHole = make_pair(deck[0], deck[1]);
+
 			Hand ourHand = Hand::empty();
 			ourHand += Hand(hole.first) + Hand(hole.second);
-			for (int i=2;i<7;i++) ourHand += Hand(deck[i]);
-			int ourValue = eval.evaluate(ourHand);
+			for (int b : board) ourHand += Hand(b);
+			for (int i=2;i<COMM+2;i++) ourHand += Hand(deck[i]);
+
 
 			Hand oppHand = Hand::empty();
-			for (int i=0;i<7;i++) oppHand += Hand(deck[i]);
+			oppHand += Hand(oppHole.first) + Hand(oppHole.second);
+			for (int b : board) oppHand += Hand(b);
+			for (int i=2;i<COMM+2;i++) oppHand += Hand(deck[i]);
+			
+			int ourValue = eval.evaluate(ourHand);
 			int oppValue = eval.evaluate(oppHand);
 
-			if (ourValue > oppValue) {
-				score += 2;
+			double weight = getPostflopWeight(oppHole);
+
+			if (ourValue >= oppValue) {
+				score += weight;
 			} else if (ourValue == oppValue) {
-				score += 1;
+				score += 0.0;
 			}
+			totalWeight += weight;
 		}
-		double strength = (double)score / (double)(2*iters);
+		double strength = score / totalWeight;
 		return strength;
 	}
 
