@@ -567,7 +567,7 @@ struct Bot {
 		}
 
 
-		const int MC_ITERS = 200;
+		const int MC_ITERS = 1000;
 		pair<int,int> myHand = toHand(myCards);
 		double strength = calcStrength(myHand, MC_ITERS, board);
 
