@@ -107,13 +107,13 @@ class Player(Bot):
         # PERCENTILES are rounded up, i.e. best hand is 100% and worst hand is > 0%
 
         # PREFLOP
-        self.open_cutoff = 30
-        self.open_defend = 10
+        self.open_cutoff = 20
+        self.open_defend = 20
         self.open_reraise = 7
         self.open_redefend = 5
         
-        self.bb_limpraise = 30
-        self.bb_defend = 10
+        self.bb_limpraise = 20
+        self.bb_defend = 20
         self.bb_reraise = 7
         self.bb_redefend = 5
 
