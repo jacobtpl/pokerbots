@@ -6,7 +6,6 @@
 #include <random>
 #include <algorithm>
 #include <fstream>
-#include <set>
 #include <map>
 #include <chrono>
 #include <iostream>
@@ -278,9 +277,6 @@ struct Bot {
 	int final_preflop_bet = 0;
 	PreflopTracker tracker;
 
-	double weight[52][52];
-	bool weights_initialized = false;
-
 	Bot() {
 		auto seed = chrono::system_clock::now().time_since_epoch().count();
 		rng = mt19937(seed);
@@ -349,7 +345,7 @@ struct Bot {
 		int oppValue = eval.evaluate(oppHand);
 
 		if (oppValue > ourValue) {
-			return 1.5;
+			return 2.0;
 		} else {
 			return 1.0;
 		}
@@ -364,7 +360,7 @@ struct Bot {
 		return b2;
 	}
 
-	double calcStrength(pair<int,int> hole, int iters, vector<int> board, bool weighted=true) {
+	double calcStrength(pair<int,int> hole, int iters, vector<int> board) {
 		if (board.size() == 0) {
 			return getPreflopEquity(hole)/100.0;
 		}
@@ -399,12 +395,7 @@ struct Bot {
 			int ourValue = eval.evaluate(ourHand);
 			int oppValue = eval.evaluate(oppHand);
 
-			double weight;
-			if (weighted) {
-				weight = getPostflopWeight(oppHole);
-			} else {
-				weight = getPreflopEquity(oppHole);
-			}
+			double weight = getPostflopWeight(oppHole) * getBoardStrength(hole, oppHole, prevBoard(board));
 
 			if (ourValue >= oppValue) {
 				score += weight;
@@ -449,23 +440,6 @@ struct Bot {
 			guaranteed_win = true;
 		}
 		max_loss = bankroll + opp_mincost;
-	}
-
-	void initWeights(pair<int,int> hole, vector<int> board) {
-		set<int> avail;
-		for (int i=0;i<52;i++) avail.insert(i);
-		avail.erase(hole.first);
-		avail.erase(hole.second);
-		for (int x:board) avail.erase(x);
-
-		for (int i=0;i<52;i++) {
-			for (int j=i+1;j<52;j++) {
-				weight[i][j] = 0.0;
-				if (avail.count(i) && avail.count(j)) {
-					weight[i][j] = getPostflopWeight(make_pair(i,j));
-				}
-			}
-		}
 	}
     /*
     Called when a new round starts. Called NUM_ROUNDS times.
@@ -649,14 +623,10 @@ struct Bot {
 			tracker.done = true;
 		}
 
+
 		const int MC_ITERS = 1000;
 		pair<int,int> myHand = toHand(myCards);
 		double strength = calcStrength(myHand, MC_ITERS, board);
-
-		if (street == 3 && !weights_initialized) {
-			weights_initialized = true;
-			initWeights(myHand, board);
-		}
 
 		// CALCULATE RAISE SIZING
 		double ratio = 0.7; // pot bet ratio postflop
