@@ -254,7 +254,7 @@ struct Bot {
 	int max_loss = 200;
 	
 	// TRACKER CONSTANTS
-	double round_start_using_tracker = 100;
+	double round_start_using_tracker = 50;
 	double low_spread = 20; // percent
 	double low_min_weight = 0.1;
 	double high_spread = 20; // percent
@@ -731,8 +731,8 @@ struct Bot {
 							ratio -= 0.5;
 						}
 						ratio = max(ratio, 2.0);
-						raiseAmount = (int)(ratio * (double)oppContribution);
 					}
+					raiseAmount = (int)(ratio * (double)oppContribution);
 				}
 			} else if (oppContribution <= 12) {
 				raiseAmount = 4 * oppContribution;
