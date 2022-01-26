@@ -243,7 +243,7 @@ struct Bot {
 	double open_reraise = 7;
 	double open_redefend = 7;
 
-	double bb_limpraise = 33;
+	double bb_limpraise = 45;
 	double bb_defend = 70;
 	double bb_reraise = 20.4;
 	double bb_redefend = 17.1;
