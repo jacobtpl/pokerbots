@@ -243,8 +243,8 @@ struct Bot {
 	double open_reraise = 7;
 	double open_redefend = 7;
 
-	double bb_limpraise = 30;
-	double bb_defend = 75;
+	double bb_limpraise = 40;
+	double bb_defend = 70;
 	double bb_reraise = 20.4;
 	double bb_redefend = 17.1;
 
@@ -254,7 +254,7 @@ struct Bot {
 	int max_loss = 200;
 	
 	// TRACKER CONSTANTS
-	double round_start_using_tracker = 150;
+	double round_start_using_tracker = 100;
 	double low_spread = 20; // percent
 	double low_min_weight = 0.1;
 	double high_spread = 20; // percent
@@ -605,6 +605,7 @@ struct Bot {
 		double fold_to_our_open = 1.0 - tracker.get_stat(1, 1, 2);
 		double they_3bet = tracker.get_stat(1, 1, 3);
 		double they_limp = tracker.get_stat(1, 0, 1);
+		double they_open = tracker.get_stat(1, 0, 2);
 
 		// UPDATE PREFLOP RANGES
 		if (roundNum > round_start_using_tracker){
@@ -636,11 +637,44 @@ struct Bot {
 				open_cutoff -= 5;
 				open_defend = 55;
 				open_reraise = 12;
-			} else if (they_3bet < 0.1) {
+			} else if (they_3bet <= 0.15 && they_3bet > 0.08) {
 				open_defend = 30;
+				open_reraise = 6;
+			}
+			else if(they_3bet <= 0.08){
+				open_defend = 16;
 				open_reraise = 5;
 			}
 			// TODO: defend and 3bet based on their opening range (if they open < 60%, we must tighten our defends and 3bets)
+			// DONE
+			if(they_open >= 0.95){
+				bb_defend = 85;
+				bb_reraise = 35;
+			}
+			else if(they_open >= 0.9){
+				bb_defend = 80;
+				bb_reraise = 30;
+			}
+			else if(they_open >= 0.85){
+				bb_defend = 75;
+				bb_reraise = 25;
+			}
+			else if(they_open >= 0.75){
+				bb_defend = 70;
+				bb_reraise = 20.4;
+			}
+			else if(they_open >= 0.65){
+				bb_defend = 65;
+				bb_reraise = 17;
+			}
+			else if(they_open >= 0.5){
+				bb_defend = 60;
+				bb_reraise = 14;
+			}
+			else if(they_open < 0.5){
+				bb_defend = 50;
+				bb_reraise = 10;
+			}
 		}
 		if (street < 3) {
 			if (oppContribution <= 2) {
@@ -653,13 +687,15 @@ struct Bot {
 						double pct = fold_to_our_open;
 						if (pct >= 0.2 && pct <= 0.3) {
 							ratio = 3.5;
-						} else if(pct > 0.3 && pct <= 0.4){
+						} else if(pct > 0.2 && pct <= 0.3){
 							ratio = 3.0;
-						} else if (pct > 0.4 && pct <= 0.5) {
+						} else if (pct > 0.3 && pct <= 0.4) {
 							ratio = 2.5;
-						} else if (pct > 0.5) {
+						} else if (pct > 0.4) {
 							ratio = 2.0;
-						} else if (pct <= 0.2) {
+						} else if(pct > 0.1 && pct <= 0.2){
+							ratio = 4.0;
+						} else if (pct <= 0.1) {
 							ratio = 5.0;
 						}
 						if(they_3bet > 0.7){
