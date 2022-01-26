@@ -2,6 +2,6 @@
 
 mkdir -p build
 cd build
-cmake ..
-make
+time cmake ..
+time make
 cd ..
