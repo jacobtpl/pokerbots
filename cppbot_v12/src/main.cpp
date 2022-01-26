@@ -243,7 +243,7 @@ struct Bot {
 	double open_reraise = 7;
 	double open_redefend = 7;
 
-	double bb_limpraise = 40;
+	double bb_limpraise = 33;
 	double bb_defend = 70;
 	double bb_reraise = 20.4;
 	double bb_redefend = 17.1;
@@ -254,7 +254,7 @@ struct Bot {
 	int max_loss = 200;
 	
 	// TRACKER CONSTANTS
-	double round_start_using_tracker = 100;
+	double round_start_using_tracker = 200;
 	double low_spread = 20; // percent
 	double low_min_weight = 0.1;
 	double high_spread = 20; // percent
