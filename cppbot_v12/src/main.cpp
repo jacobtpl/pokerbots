@@ -192,8 +192,8 @@ struct PreflopTracker {
         return (double)stats[player][blind][idx] / (double)counts[player][blind][idx];
 	}
 
-	bool has_data(int player, int blind, int amount) {
-		return (counts[player][blind][get_index(amount)] > 0);
+	int data_count(int player, int blind, int amount) {
+		return counts[player][blind][get_index(amount)];
 	}
 	
 	pair<double, double> get_percentile_bounds(int player, int blind, int amount) {
@@ -215,7 +215,7 @@ struct PreflopTracker {
 			if (counts[player][blind][i] == 0) {
 				out << x << ": " << "None" << ", ";
 			} else {
-				out << x << ": " << (double)stats[player][blind][i] / (double)counts[player][blind][i] << ", ";
+				out << x << ": " << (double)stats[player][blind][i] / (double)counts[player][blind][i] << " (" << counts[player][blind][i] << "), ";
 			}
 		}
 		return out.str();
@@ -254,7 +254,7 @@ struct Bot {
 	int max_loss = 200;
 	
 	// TRACKER CONSTANTS
-	double round_start_using_tracker = 120;
+	double round_start_using_tracker = 100;
 	double low_spread = 20; // percent
 	double low_min_weight = 0.1;
 	double high_spread = 20; // percent
@@ -289,19 +289,21 @@ struct Bot {
 		return udist(rng);
 	}
 	
+	const int MIN_DATA_POINTS = 10;
+
 	double getPostflopWeight(pair<int,int> hand) {
 		if (roundNum < round_start_using_tracker) {
 			return getPreflopEquity(hand);
 		}
 		pair<double, double> bounds;
 		if (bigBlind) {
-			if (!tracker.has_data(1, 0, final_preflop_bet)) {
-				cout << "ERROR: No data yet" << endl;
+			if (tracker.data_count(1, 0, final_preflop_bet) < MIN_DATA_POINTS) {
+				cout << "ERROR: Not enough data yet" << endl;
 				return getPreflopEquity(hand);
 			}
 			bounds = tracker.get_percentile_bounds(1, 0, final_preflop_bet);
 		} else {
-			if (!tracker.has_data(1, 1, final_preflop_bet)) {
+			if (tracker.data_count(1, 1, final_preflop_bet) < MIN_DATA_POINTS) {
 				cout << "ERROR: No data yet" << endl;
 				return getPreflopEquity(hand);
 			}
