@@ -625,25 +625,31 @@ struct Bot {
 			// open tighter and defend wider if they 3bet more
 			open_defend = 44;
 			open_reraise = 7;
+			open_redefend = 7;
 			if (they_3bet > 0.7) {
 				open_cutoff -= 15;
 				open_defend = 70;
 				open_reraise = 25;
+				open_redefend = 20;
 			} else if (they_3bet > 0.5) {
 				open_cutoff -= 10;
 				open_defend = 70;
 				open_reraise = 20;
+				open_redefend = 16;
 			} else if(they_3bet > 0.3){
 				open_cutoff -= 5;
 				open_defend = 55;
 				open_reraise = 12;
+				open_redefend = 10;
 			} else if (they_3bet <= 0.15 && they_3bet > 0.08) {
 				open_defend = 30;
 				open_reraise = 6;
+				open_redefend = 6;
 			}
 			else if(they_3bet <= 0.08){
 				open_defend = 16;
 				open_reraise = 5;
+				open_redefend = 5;
 			}
 			// TODO: defend and 3bet based on their opening range (if they open < 60%, we must tighten our defends and 3bets)
 			// DONE
