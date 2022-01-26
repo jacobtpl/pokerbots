@@ -605,100 +605,112 @@ struct Bot {
 
 		int raiseAmount = 0;
 		double fold_to_our_open = 1.0 - tracker.get_stat(1, 1, 2);
+		bool use_fold_to_our_open = (tracker.counts[1][1][2] > MIN_DATA_POINTS);
+		
 		double they_3bet = tracker.get_stat(1, 1, 3);
+		bool use_they_3bet = (tracker.counts[1][1][3] > MIN_DATA_POINTS);
+
 		double they_limp = tracker.get_stat(1, 0, 1);
+		bool use_they_limp = (tracker.counts[1][0][1] > MIN_DATA_POINTS);
+		
 		double they_open = tracker.get_stat(1, 0, 2);
+		bool use_they_open = (tracker.counts[1][0][2] > MIN_DATA_POINTS);
 
 		// UPDATE PREFLOP RANGES
 		if (roundNum > round_start_using_tracker){
 			// open wider if they fold more
 			open_cutoff = 80;
-			if (fold_to_our_open >= 0.2 && fold_to_our_open <= 0.3) {
-				open_cutoff = 80;
-			} else if(fold_to_our_open > 0.3 && fold_to_our_open <= 0.4){
-				open_cutoff = 85;
-			} else if (fold_to_our_open > 0.4 && fold_to_our_open <= 0.5) {
-				open_cutoff = 90;
-			} else if (fold_to_our_open > 0.5) {
-				open_cutoff = 100;
-			} else if (fold_to_our_open < 0.2) {
-				open_cutoff = 75;
+			if (use_fold_to_our_open) {
+				if (fold_to_our_open >= 0.2 && fold_to_our_open <= 0.3) {
+					open_cutoff = 80;
+				} else if(fold_to_our_open > 0.3 && fold_to_our_open <= 0.4){
+					open_cutoff = 85;
+				} else if (fold_to_our_open > 0.4 && fold_to_our_open <= 0.5) {
+					open_cutoff = 90;
+				} else if (fold_to_our_open > 0.5) {
+					open_cutoff = 100;
+				} else if (fold_to_our_open < 0.2) {
+					open_cutoff = 75;
+				}
 			}
 			// open tighter and defend wider if they 3bet more
 			open_defend = 44;
 			open_reraise = 7;
 			open_redefend = 7;
-			if (they_3bet > 0.7) {
-				open_cutoff -= 15;
-				open_defend = 70;
-				open_reraise = 25;
-				open_redefend = 20;
-			} else if (they_3bet > 0.5) {
-				open_cutoff -= 10;
-				open_defend = 70;
-				open_reraise = 20;
-				open_redefend = 16;
-			} else if(they_3bet > 0.3){
-				open_cutoff -= 5;
-				open_defend = 55;
-				open_reraise = 12;
-				open_redefend = 10;
-			} else if (they_3bet <= 0.15 && they_3bet > 0.08) {
-				open_defend = 30;
-				open_reraise = 6;
-				open_redefend = 6;
-			}
-			else if(they_3bet <= 0.08){
-				open_defend = 16;
-				open_reraise = 5;
-				open_redefend = 5;
+			if (use_they_3bet) {
+				if (they_3bet > 0.7) {
+					open_cutoff -= 15;
+					open_defend = 70;
+					open_reraise = 25;
+					open_redefend = 20;
+				} else if (they_3bet > 0.5) {
+					open_cutoff -= 10;
+					open_defend = 70;
+					open_reraise = 20;
+					open_redefend = 16;
+				} else if(they_3bet > 0.3){
+					open_cutoff -= 5;
+					open_defend = 55;
+					open_reraise = 12;
+					open_redefend = 10;
+				} else if (they_3bet <= 0.15 && they_3bet > 0.08) {
+					open_defend = 30;
+					open_reraise = 6;
+					open_redefend = 6;
+				} else if(they_3bet <= 0.08){
+					open_defend = 16;
+					open_reraise = 5;
+					open_redefend = 5;
+				}
 			}
 			// TODO: defend and 3bet based on their opening range (if they open < 60%, we must tighten our defends and 3bets)
 			// DONE
-			if(they_open >= 0.95){
-				bb_defend = 85;
-				bb_reraise = 35;
-				bb_redefend = 30;
-			}
-			else if(they_open >= 0.9){
-				bb_defend = 80;
-				bb_reraise = 30;
-				bb_redefend = 25;
-			}
-			else if(they_open >= 0.85){
-				bb_defend = 75;
-				bb_reraise = 25;
-				bb_redefend = 20;
-			}
-			else if(they_open >= 0.75){
-				bb_defend = 70;
-				bb_reraise = 20.4;
-				bb_redefend = 17.1;
-			}
-			else if(they_open >= 0.65){
-				bb_defend = 65;
-				bb_reraise = 19;
-				bb_redefend = 16;
-			}
-			else if(they_open >= 0.5){
-				bb_defend = 60;
-				bb_reraise = 16;
-				bb_redefend = 13;
-			}
-			else if(they_open >= 0.4){
-				bb_defend = 50;
-				bb_reraise = 13;
-				bb_redefend = 10;
-			}
-			else if(they_open >= 0.3){
-				bb_defend = 40;
-				bb_reraise = 10;
-				bb_redefend = 7;
-			}
-			else if(they_open < 0.3){
-				bb_defend = 30;
-				bb_reraise = 7;
-				bb_redefend = 5;
+			if (use_they_open) {
+				if(they_open >= 0.95){
+					bb_defend = 85;
+					bb_reraise = 35;
+					bb_redefend = 30;
+				}
+				else if(they_open >= 0.9){
+					bb_defend = 80;
+					bb_reraise = 30;
+					bb_redefend = 25;
+				}
+				else if(they_open >= 0.85){
+					bb_defend = 75;
+					bb_reraise = 25;
+					bb_redefend = 20;
+				}
+				else if(they_open >= 0.75){
+					bb_defend = 70;
+					bb_reraise = 20.4;
+					bb_redefend = 17.1;
+				}
+				else if(they_open >= 0.65){
+					bb_defend = 65;
+					bb_reraise = 19;
+					bb_redefend = 16;
+				}
+				else if(they_open >= 0.5){
+					bb_defend = 60;
+					bb_reraise = 16;
+					bb_redefend = 13;
+				}
+				else if(they_open >= 0.4){
+					bb_defend = 50;
+					bb_reraise = 13;
+					bb_redefend = 10;
+				}
+				else if(they_open >= 0.3){
+					bb_defend = 40;
+					bb_reraise = 10;
+					bb_redefend = 7;
+				}
+				else if(they_open < 0.3){
+					bb_defend = 30;
+					bb_reraise = 7;
+					bb_redefend = 5;
+				}
 			}
 		}
 		if (street < 3) {
