@@ -804,12 +804,132 @@ struct Bot {
 		// PREFLOP CASEWORK
 		if (street < 3) {
 			Action my_action;
-			if (myContribution > 2 && continueCost <= myContribution) {
-				passive_action = flat_action;
-			}
 			double rev_percentile = 100.0 - getPreflopPercentile(myHand);
 			rev_percentile = max(rev_percentile, 0.0);
 			last_raised = false;
+			// ADJUST CALCULATIONS BASED ON OPPONENT RAISE SIZE
+			double multiplier = 1.0;
+			if (bigBlind && myContribution == 2) { // against opponent open
+				if(oppContribution == 4){
+					multiplier = 0.8;
+				}
+				else if(oppContribution == 5){
+					multiplier = 0.9;
+				}
+				else if(oppContribution == 6){
+					multiplier = 1;
+				}
+				else if(oppContribution == 7){
+					multiplier = 1.1;
+				}
+				else if(oppContribution == 8){
+					multiplier = 1.2;
+				}
+				else if(oppContribution <= 10){
+					multiplier = 1.4;
+				}
+				else if(oppContribution <= 12){
+					multiplier = 1.6;
+				}
+				else if(oppContribution <= 15){
+					multiplier = 2;
+				}
+				else if(oppContribution <= 18){
+					multiplier = 2.5;
+				}
+				else if(oppContribution <= 24){
+					multiplier = 3;
+				}
+				else if(oppContribution <= 30){
+					multiplier = 3.5;
+				}
+				else if(oppContribution <= 36){
+					multiplier = 4;
+				}
+
+			}
+			else if(!bigBlind && myContribution <= 10){ // against opponent 3bet
+				double ratio = oppContribution/(double)myContribution;
+				if(ratio<=2.0){
+					multiplier = 0.6;
+				}
+				else if(ratio<=2.5){
+					multiplier = 0.7;
+				}
+				else if(ratio<=3.0){
+					multiplier = 0.8;
+				}
+				else if(ratio<=3.5){
+					multiplier = 0.9;
+				}
+				else if(ratio<=4){
+					multiplier = 1.0;
+				}
+				else if(ratio<=4.5){
+					multiplier = 1.1;
+				}
+				else if(ratio<=5){
+					multiplier = 1.25;
+				}
+				else if(ratio<=6){
+					multiplier = 1.5;
+				}
+				else if(ratio <= 7){
+					multiplier = 2;
+				}
+				else if(ratio <= 8){
+					multiplier = 2.5;
+				}
+				else if(ratio <= 9){
+					multiplier = 3;
+				}
+			}
+			else if(bigBlind && myContribution <= 12){ // against opponent limp 3bet
+				double ratio = oppContribution/(double)myContribution;
+				if(ratio<=2.0){
+					multiplier = 0.8;
+				}
+				else if(ratio <= 2.5){
+					multiplier = 1.0;
+				}
+				else if(ratio <= 3){
+					multiplier = 1.2;
+				}
+			}
+			else if(bigBlind){// against opponent 4bet
+				double ratio = oppContribution/(double)myContribution;
+				if(ratio <= 2.0){
+					multiplier = 0.8;
+				}
+				else if(ratio <= 2.2){
+					multiplier = 0.9;
+				}
+				else if(ratio <= 2.5){
+					multiplier = 1.0;
+				}
+				else if(ratio <= 3.0){
+					multiplier = 1.1;
+				}
+				else if(ratio <= 3.5){
+					multiplier = 1.3;
+				}
+				else if(ratio <= 4.0){
+					multiplier = 1.5;
+				}
+				else if(ratio <= 5.0){
+					multiplier = 1.75;
+				}
+				else if(ratio <= 6.0){
+					multiplier = 2;
+				}
+				else if(ratio <= 8.0){
+					multiplier = 2.5;
+				}
+				else if(ratio <= 10.0){
+					multiplier = 3;
+				}
+			}
+			double pot_odds_pct = rev_percentile * multiplier;
 			if (!bigBlind) {
 				// small blind
 				if (continueCost == 1) {
@@ -823,7 +943,7 @@ struct Bot {
 					if (rev_percentile < open_reraise) {
 						last_raised = true;
 						my_action = aggro_action;
-					} else if (rev_percentile < open_defend) {
+					} else if (pot_odds_pct < open_defend) {
 						my_action = flat_action;
 					} else {
 						my_action = passive_action;
@@ -832,7 +952,7 @@ struct Bot {
 					if (rev_percentile < preflop_allin) {
 						last_raised = true;
 						my_action = jam_action;
-					} else if (rev_percentile < open_redefend) {
+					} else if (pot_odds_pct < open_redefend) {
 						my_action = flat_action;
 					} else {
 						my_action = passive_action;
@@ -851,7 +971,7 @@ struct Bot {
 					if (rev_percentile < bb_reraise) {
 						last_raised = true;
 						my_action = aggro_action;
-					} else if (rev_percentile < bb_defend) {
+					} else if (pot_odds_pct < bb_defend) {
 						my_action = flat_action;
 					} else {
 						my_action = passive_action;
@@ -860,7 +980,7 @@ struct Bot {
 					if (rev_percentile < preflop_allin) {
 						last_raised = true;
 						my_action = jam_action;
-					} else if (rev_percentile < bb_redefend) {
+					} else if (pot_odds_pct < bb_redefend) {
 						my_action = flat_action;
 					} else {
 						my_action = passive_action;
