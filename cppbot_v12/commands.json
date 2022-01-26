@@ -1,4 +1,4 @@
 {
-    "build": ["bash", "build.sh"],
+    "build": ["time", "bash", "build.sh"],
     "run": ["bash", "run.sh"]
 }
