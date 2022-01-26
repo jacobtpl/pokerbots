@@ -254,7 +254,7 @@ struct Bot {
 	int max_loss = 200;
 	
 	// TRACKER CONSTANTS
-	double round_start_using_tracker = 200;
+	double round_start_using_tracker = 120;
 	double low_spread = 20; // percent
 	double low_min_weight = 0.1;
 	double high_spread = 20; // percent
@@ -650,30 +650,47 @@ struct Bot {
 			if(they_open >= 0.95){
 				bb_defend = 85;
 				bb_reraise = 35;
+				bb_redefend = 30;
 			}
 			else if(they_open >= 0.9){
 				bb_defend = 80;
 				bb_reraise = 30;
+				bb_redefend = 25;
 			}
 			else if(they_open >= 0.85){
 				bb_defend = 75;
 				bb_reraise = 25;
+				bb_redefend = 20;
 			}
 			else if(they_open >= 0.75){
 				bb_defend = 70;
 				bb_reraise = 20.4;
+				bb_redefend = 17.1;
 			}
 			else if(they_open >= 0.65){
 				bb_defend = 65;
-				bb_reraise = 17;
+				bb_reraise = 19;
+				bb_redefend = 16;
 			}
 			else if(they_open >= 0.5){
 				bb_defend = 60;
-				bb_reraise = 14;
+				bb_reraise = 16;
+				bb_redefend = 13;
 			}
-			else if(they_open < 0.5){
+			else if(they_open >= 0.4){
 				bb_defend = 50;
+				bb_reraise = 13;
+				bb_redefend = 10;
+			}
+			else if(they_open >= 0.3){
+				bb_defend = 40;
 				bb_reraise = 10;
+				bb_redefend = 7;
+			}
+			else if(they_open < 0.3){
+				bb_defend = 30;
+				bb_reraise = 7;
+				bb_redefend = 5;
 			}
 		}
 		if (street < 3) {
