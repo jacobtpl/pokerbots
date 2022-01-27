@@ -243,7 +243,8 @@ struct Bot {
 	double open_reraise = 7;
 	double open_redefend = 7;
 
-	double bb_limpraise = 45;
+	double bb_limpraise = 40;
+	double bb_limpraisedefend = 25;
 	double bb_defend = 70;
 	double bb_reraise = 20.4;
 	double bb_redefend = 17.1;
@@ -266,8 +267,8 @@ struct Bot {
 	double turn_multiplier = 1.0;
 	double river_multiplier = 1.0;
 
-	double lead_bluff = 0.1;
-	double cbet_bluff = 0.2;
+	double lead_bluff = 0.2;
+	double cbet_bluff = 0.3;
 	double bluff_raise = 0.3;
 
 	bool will_bluff = false;
@@ -383,7 +384,7 @@ struct Bot {
 	void checkGuaranteedWin(int bankroll) {
 		int remain = 1000 - roundNum + 1;
 
-		if (roundNum < 100) {
+		if (roundNum < round_start_using_tracker) {
 			will_bluff = false;
 		} else {
 			will_bluff = true;
@@ -476,8 +477,8 @@ struct Bot {
 			tracker.done = true;
 		}
 
-		double change = 0.05;
-		double bluff_change = 0.02;
+		double change = 0.025;
+		double bluff_change = 0.05;
 
 		if (street == 5 && river_call) {
 			if (my_delta > 	0) {
@@ -601,7 +602,7 @@ struct Bot {
 		double strength = calcStrength(myHand, MC_ITERS, board);
 
 		// CALCULATE RAISE SIZING
-		double ratio = 0.7; // pot bet ratio postflop
+		double postflop_ratio = 0.65 + (0.1 * randomReal()); // pot bet ratio postflop
 
 		int raiseAmount = 0;
 		double fold_to_our_open = 1.0 - tracker.get_stat(1, 1, 2);
@@ -715,25 +716,27 @@ struct Bot {
 		}
 		if (street < 3) {
 			if (oppContribution <= 2) {
-				raiseAmount = 4 * oppContribution;
+				raiseAmount = 3.5 * oppContribution;
 				if (bigBlind) {
 					raiseAmount = 6 * oppContribution;
 				} else {
 					double ratio = 3.5;
 					if (roundNum > round_start_using_tracker) {
 						double pct = fold_to_our_open;
-						if (pct >= 0.2 && pct <= 0.3) {
-							ratio = 3.5;
-						} else if(pct > 0.2 && pct <= 0.3){
-							ratio = 3.0;
-						} else if (pct > 0.3 && pct <= 0.4) {
-							ratio = 2.5;
-						} else if (pct > 0.4) {
-							ratio = 2.0;
+						if (pct > 0.05 && pct <= 0.1) {
+							ratio = 5.0;
 						} else if(pct > 0.1 && pct <= 0.2){
 							ratio = 4.0;
-						} else if (pct <= 0.1) {
-							ratio = 5.0;
+						} else if(pct > 0.2 && pct <= 0.3){
+							ratio = 3.5;
+						} else if (pct > 0.3 && pct <= 0.4) {
+							ratio = 3.0;
+						} else if (pct > 0.4 && pct < 0.5){
+							ratio = 2.5;
+						} else if (pct >= 0.4) {
+							ratio = 2.0;
+						} else if (pct <= 0.05) {
+							ratio = 6.0;
 						}
 						if(they_3bet > 0.7){
 							ratio -= 1.5;
@@ -754,7 +757,7 @@ struct Bot {
 				raiseAmount = 200;
 			}
 		} else {
-			raiseAmount = (int)(ratio * (potTotal + continueCost) + myPip + continueCost);
+			raiseAmount = (int)(postflop_ratio * (potTotal + continueCost) + myPip + continueCost);
 		}
 		// ensure raises are legal
 		raiseAmount = max(raiseAmount, minRaise);
@@ -907,7 +910,19 @@ struct Bot {
 					multiplier = 1.0;
 				}
 				else if(ratio <= 3){
-					multiplier = 1.2;
+					multiplier = 1.1;
+				}
+				else if(ratio > 3 &&  ratio <= 3.5){
+					multiplier = 1.25;
+				}
+				else if(ratio > 3.5 && ratio <= 4){
+					multiplier = 1.5;
+				}
+				else if(ratio > 4 && ratio <= 4.5){
+					multiplier = 1.75;
+				}
+				else if(ratio > 4.5){
+					multiplier = 2;
 				}
 			}
 			else if(bigBlind){// against opponent 4bet
@@ -978,10 +993,12 @@ struct Bot {
 					if (rev_percentile < bb_limpraise) {
 						last_raised = true;
 						my_action = aggro_action;
+						bb_limpraise += 0.25;
+						bb_limpraise = min(bb_limpraise,70.0);
 					} else {
 						my_action = flat_action;
 					}
-				} else if (oppContribution <= 36) {
+				} else if (oppContribution <= 12) {
 					if (rev_percentile < bb_reraise) {
 						last_raised = true;
 						my_action = aggro_action;
@@ -989,6 +1006,19 @@ struct Bot {
 						my_action = flat_action;
 					} else {
 						my_action = passive_action;
+					}
+				} else if(oppContribution <= 48 && myContribution <= 12) {
+					if(rev_percentile < preflop_allin){
+						last_raised = true;
+						my_action = jam_action;
+					}
+					else if(pot_odds_pct < bb_limpraisedefend){
+						my_action = flat_action;
+						bb_limpraise -= 0.25;
+					}
+					else{
+						my_action = passive_action;
+						bb_limpraise -= 1.5;
 					}
 				} else {
 					if (rev_percentile < preflop_allin) {
@@ -1014,18 +1044,18 @@ struct Bot {
         if (street == 3) {
 			out_of_range = 0.15;
 			reraise_cutoff = 0.8;
-			lead_cutoff = 0.4;
-			cbet_cutoff = 0.25;
+			lead_cutoff = 0.5;
+			cbet_cutoff = 0.35;
 		} else if (street == 4) {
 			out_of_range = 0.2;
 			reraise_cutoff = 0.825;
-			lead_cutoff = 0.45;
-			cbet_cutoff = 0.3;
+			lead_cutoff = 0.55;
+			cbet_cutoff = 0.4;
 		} else {
 			out_of_range = 0.25;
 			reraise_cutoff = 0.85;
-			lead_cutoff = 0.5;
-			cbet_cutoff = 0.35;
+			lead_cutoff = 0.6;
+			cbet_cutoff = 0.45;
 		}
 
 		if (continueCost > 0) {
