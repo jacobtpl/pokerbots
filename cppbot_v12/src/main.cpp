@@ -993,8 +993,8 @@ struct Bot {
 					if (rev_percentile < bb_limpraise) {
 						last_raised = true;
 						my_action = aggro_action;
-						bb_limpraise += 0.25;
-						bb_limpraise = min(bb_limpraise,70.0);
+						bb_limpraise += 1.0;
+						bb_limpraise = min(bb_limpraise, 65.0);
 					} else {
 						my_action = flat_action;
 					}
@@ -1014,11 +1014,12 @@ struct Bot {
 					}
 					else if(pot_odds_pct < bb_limpraisedefend){
 						my_action = flat_action;
-						bb_limpraise -= 0.25;
+						bb_limpraise -= 1.0;
 					}
 					else{
 						my_action = passive_action;
-						bb_limpraise -= 1.5;
+						bb_limpraise -= 6.0;
+						bb_limpraise = max(bb_limpraise, bb_limpraisedefend);
 					}
 				} else {
 					if (rev_percentile < preflop_allin) {
